@@ -1,0 +1,7 @@
+{"rules" : 
+    [{
+		"id" : "Discipline",
+		"checksql" : "SELECT distinct e.ecinstanceid id, e.ECClassId, e.UserLabel FROM bgr.pipe_comp flange JOIN bgr.equip e ON imodel_bbox_overlaps(imodel_bbox(e.origin.x + e.bboxlow.x,e.origin.y + e.bboxlow.y, e.origin.z + e.bboxlow.z, e.origin.x+ e.bboxhigh.x, e.origin.y + e.bboxhigh.y,e.origin.z + e.bboxhigh.z), imodel_bbox(flange.origin.x + flange.bboxlow.x,flange.origin.y + flange.bboxlow.y, e.origin.z + e.bboxlow.z, flange.origin.x+ flange.bboxhigh.x, flange.origin.y + flange.bboxhigh.y,flange.origin.z + flange.bboxhigh.z)) WHERE flange.prep like '%FF%' and e.userlabel like '%JB%'",
+		"elementsql" : "SELECT distinct e.ecinstanceid id, e.ECClassId, e.UserLabel FROM bgr.pipe_comp flange JOIN bgr.equip e ON imodel_bbox_overlaps(imodel_bbox(e.origin.x + e.bboxlow.x,e.origin.y + e.bboxlow.y, e.origin.z + e.bboxlow.z, e.origin.x+ e.bboxhigh.x, e.origin.y + e.bboxhigh.y,e.origin.z + e.bboxhigh.z), imodel_bbox(flange.origin.x + flange.bboxlow.x,flange.origin.y + flange.bboxlow.y, e.origin.z + e.bboxlow.z, flange.origin.x+ flange.bboxhigh.x, flange.origin.y + flange.bboxhigh.y,flange.origin.z + flange.bboxhigh.z)) WHERE flange.prep like '%FF%' and e.userlabel like '%JB%'"
+	}]
+}

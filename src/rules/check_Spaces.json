@@ -1,0 +1,7 @@
+{"rules" : 
+    [{
+		"id" : "Power Socket",
+		"checksql" : "SELECT distinct space.ecinstanceid id, space.ECClassId, space.UserLabel FROM spatial.space space where space.ecinstanceid NOT IN (select space.ecinstanceid from spatial.space JOIN bis.physicalelement pe ON imodel_bbox_contains(imodel_bbox(space.origin.x + space.bboxlow.x,space.origin.y + space.bboxlow.y, space.origin.z + space.bboxlow.z, space.origin.x+ space.bboxhigh.x, space.origin.y + space.bboxhigh.y,space.origin.z + space.bboxhigh.z), imodel_bbox(pe.origin.x + pe.bboxlow.x,pe.origin.y + pe.bboxlow.y, pe.origin.z + pe.bboxlow.z, pe.origin.x+ pe.bboxhigh.x, pe.origin.y + pe.bboxhigh.y,pe.origin.z + pe.bboxhigh.z)) WHERE pe.userlabel like '%Duplex Receptacle%')",
+		"elementsql" : "SELECT distinct space.ecinstanceid id, space.ECClassId, space.UserLabel FROM spatial.space space where space.ecinstanceid NOT IN (select space.ecinstanceid from spatial.space JOIN bis.physicalelement pe ON imodel_bbox_contains(imodel_bbox(space.origin.x + space.bboxlow.x,space.origin.y + space.bboxlow.y, space.origin.z + space.bboxlow.z, space.origin.x+ space.bboxhigh.x, space.origin.y + space.bboxhigh.y,space.origin.z + space.bboxhigh.z), imodel_bbox(pe.origin.x + pe.bboxlow.x,pe.origin.y + pe.bboxlow.y, pe.origin.z + pe.bboxlow.z, pe.origin.x+ pe.bboxhigh.x, pe.origin.y + pe.bboxhigh.y,pe.origin.z + pe.bboxhigh.z)) WHERE pe.userlabel like '%Duplex Receptacle%')"
+	}]
+}
