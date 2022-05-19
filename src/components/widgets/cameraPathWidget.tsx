@@ -13,6 +13,8 @@ import { CameraPathTool } from "../tools/cameraPathTool";
 import "./cameraPath.scss";
 import { KeySet } from "@itwin/presentation-common";
 import { Presentation, SelectionChangeEventArgs } from "@itwin/presentation-frontend";
+import { Id64Arg, Id64String } from "@itwin/core-bentley";
+import { GeometryStreamIterator, GeometryStreamProps } from "@itwin/core-common";
 
 const speeds: SelectOption<number>[] = [
   { value: 2.23520, label: "5 Mph: Walking" },
@@ -57,7 +59,7 @@ const CameraPathWidget = () => {
     Presentation.selection.selectionChange.addListener(_onSelectionChanged);
   }, []);
 
-  const capturePath = () => {
+  const capturePath = async () => {
     let elements: SelectedElement[] = [];
     const iModel = viewport?.iModel
     selectedPathElements.current.instanceKeys.forEach((values, key) => {
@@ -69,7 +71,19 @@ const CameraPathWidget = () => {
 
     setCapturedPathElements(capturedPathElements.concat(elements));
     if (iModel) {
-      /* const geoElement = iModel.elements.getElementProps<GeometryPartProps>({id: elements[0], wantGeometry: true})*/
+      const element = elements[0].elementId as Id64String;
+      const geoElement = await iModel.elements.loadProps(element, {wantGeometry : true});
+      if (geoElement) {
+        const temp: any = geoElement;
+        const geoStreamProps = temp.geom;
+        const geoStream = GeometryStreamIterator.fromGeometricElement3d(temp);
+        console.log(geoStream);
+        for (let segment in geoStream) {
+          console.log(segment)
+        }
+      }
+
+      
     }
   };
 
