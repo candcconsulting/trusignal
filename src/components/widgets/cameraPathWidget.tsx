@@ -69,7 +69,7 @@ const CameraPathWidget = () => {
 
     setCapturedPathElements(capturedPathElements.concat(elements));
     if (iModel) {
-      const geoElement = iModel.elements.getElementProps<GeometryPartProps>({id: elements[0], wantGeometry: true})
+      /* const geoElement = iModel.elements.getElementProps<GeometryPartProps>({id: elements[0], wantGeometry: true})*/
     }
   };
 
