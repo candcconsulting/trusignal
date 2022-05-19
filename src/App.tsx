@@ -6,7 +6,7 @@
 import "./App.scss";
 
 import { BrowserAuthorizationClient } from "@itwin/browser-authorization";
-import type { ScreenViewport } from "@itwin/core-frontend";
+import type { IModelConnection, ScreenViewport } from "@itwin/core-frontend";
 import { FitViewTool, IModelApp, StandardViewId } from "@itwin/core-frontend";
 import { FillCentered } from "@itwin/core-react";
 import { Header, HeaderBreadcrumbs, HeaderButton, HeaderLogo, IconButton, MenuItem, ProgressLinear, UserIcon } from "@itwin/itwinui-react";
@@ -30,7 +30,7 @@ const App: React.FC = () => {
   const [selectedIModel, setSelectedIModel] = useState({id: process.env.IMJS_ITWIN_ID, displayName: "iModel Display Name", name : "iModel Name"})
   const [selectedProject, setSelectedProject] = useState({name: "Please select", description: "a project", id: ""});
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-
+  const [isOpen, setIsOpen] = useState(false);
   const accessToken = useAccessToken();
 
   const authClient = useMemo(
@@ -149,7 +149,7 @@ const App: React.FC = () => {
         /* setIModelId(urlParams.get("iModelId") as string); */
         BentleyAPIFunctions.getImodelData(authClient, iModelId).then(iModelData => {
           setSelectedIModel({id: iModelId, displayName: iModelData.displayName, name: iModelData.name})
-        })
+        })        
       }        
       else {
         if (!process.env.IMJS_IMODEL_ID) {
@@ -168,11 +168,21 @@ const App: React.FC = () => {
         setSelectedProject({name: projData.projectNumber ,description: projData.displayName , id: projData.id});
         })
       BentleyAPIFunctions.getImodelData(authClient, iModelId).then(iModelData => {
-          setSelectedIModel({id: iModelId, displayName: iModelData.displayName, name: iModelData.name})
+          setSelectedIModel({id: iModelId, displayName: iModelData.displayName, name: iModelData.name})          
       })
     }
   }, [accessToken, iTwinId, iModelId, authClient]);
   
+useEffect(() => {
+  if (isOpen) {
+    IModelApp.quantityFormatter.setActiveUnitSystem("metric", true);
+  }  
+}, [isOpen])
+
+  const iModelConnected = useCallback ((iModel: IModelConnection) => {
+    IModelApp.quantityFormatter.setActiveUnitSystem("metric", true);
+    setIsOpen(true);
+  }, [])
 
   /** NOTE: This function will execute the "Fit View" tool after the iModel is loaded into the Viewer.
    * This will provide an "optimal" view of the model. However, it will override any default views that are
@@ -282,7 +292,7 @@ const App: React.FC = () => {
         //viewCreatorOptions={viewCreatorOptions}
         enablePerformanceMonitors={true} // see description in the README (https://www.npmjs.com/package/@itwin/desktop-viewer-react)
         uiProviders={[ new CameraPathWidgetProvider]}
-
+        onIModelConnected = {iModelConnected}
       />
     </div>
   </div>

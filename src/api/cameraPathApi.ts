@@ -19,7 +19,7 @@ export default class CameraPathApp {
       if (changeCameraTargetOnly) {
         viewport.view.setEyePoint(cameraPoint.eyePoint);
       } else {
-        viewport.view.lookAt({ eyePoint: cameraPoint.eyePoint, targetPoint: cameraPoint.targetPoint, lensAngle: undefined,  upVector: new Vector3d(0, 0, 1)}); //, lensAngle: viewport.view.camera.lens });
+        viewport.view.lookAt({ eyePoint: cameraPoint.eyePoint, targetPoint: cameraPoint.targetPoint, upVector: new Vector3d(0, 0, 1), lensAngle: viewport.view.camera.lens });
       }
     }
     viewport.synchWithView();
@@ -37,69 +37,75 @@ export default class CameraPathApp {
 export class CameraPath {
   private _path: CurveChainWithDistanceIndex | undefined;
   private _targetPoints: Point3d[] = [];
-
+  
   constructor(public pathName: string) {
-    const vp = IModelApp.viewManager.getFirstOpenView();
-    let currentPathCoordinates: typeof E1 = [];
+    if (pathName === "") {
+      return;
+      // we need to handle a geometry handler
+    } else {
+      const vp = IModelApp.viewManager.getFirstOpenView();
+      let currentPathCoordinates: typeof E1 = [];
 
-    switch (vp?.iModel.name) {
-      case "ZZ.TRU East - E1 Signal Sighting":
-        currentPathCoordinates = E1;
-        break;
-      case "AA1. TRU East E1 - ECML16 - Coordination/Shared Model":
-        currentPathCoordinates = E1;
-        break;
-      case "AG. TRU West - W1A - Coordination/Shared Model":
-        currentPathCoordinates = W1A;
-        break;
-      case "AH. TRU West - W1B - Coordination/Shared Model":
-        currentPathCoordinates = W1A;
-        break;
-      case "AI. TRU West - W2A - Coordination/Shared Model":
-        currentPathCoordinates = W1A;
-        break;
-      case "West of Leeds - W3A - Coordination/Shared Model": //"AK. TRU West - W3A - Coordination - Shared Model":
-        currentPathCoordinates = W3A;
-        break;
-      case "AL. TRU West - W3B - Coordination-Shared Model":
-        currentPathCoordinates = W3B;
-        break;
-      case "AM. TRU West - W4 - Coordination/Shared Model":
-        currentPathCoordinates = W4;
-        break;
-      default:
-        console.log("Model not listed in switch :" + vp?.iModel.name)
-        currentPathCoordinates = E1;
-        break;
-    }
-
-    const targetPoints: Point3d[] = [];
-    const directions: Point3d[] = [];
-    const xOffset = 0;
-    const yOffset = 0;
-    const zOffset = 0;
-    let i = 0;
-    // we need to drop the first direction point
-    currentPathCoordinates.forEach((item) => {
-      if (i === 0) {
-        i = i + 1;
-      } else {
-        targetPoints.push(new Point3d(item.cameraPoint.x + xOffset, item.cameraPoint.y + yOffset, item.cameraPoint.z + zOffset));
-        directions.push(new Point3d(item.cameraPoint.x + xOffset, item.cameraPoint.y + yOffset, item.cameraPoint.z + zOffset));
-        i = i + 1;
+      switch (vp?.iModel.name) {
+        case "ZZ.TRU East - E1 Signal Sighting":
+          currentPathCoordinates = E1;
+          break;
+        case "AA1. TRU East E1 - ECML16 - Coordination/Shared Model":
+          currentPathCoordinates = E1;
+          break;
+        case "AG. TRU West - W1A - Coordination/Shared Model":
+          currentPathCoordinates = W1A;
+          break;
+        case "AH. TRU West - W1B - Coordination/Shared Model":
+          currentPathCoordinates = W1A;
+          break;
+        case "AI. TRU West - W2A - Coordination/Shared Model":
+          currentPathCoordinates = W1A;
+          break;
+        case "West of Leeds - W3A - Coordination/Shared Model": //"AK. TRU West - W3A - Coordination - Shared Model":
+          currentPathCoordinates = W3A;
+          break;
+        case "AL. TRU West - W3B - Coordination-Shared Model":
+          currentPathCoordinates = W3B;
+          break;
+        case "AM. TRU West - W4 - Coordination/Shared Model":
+          currentPathCoordinates = W4;
+          break;
+        default:
+          console.log("Model not listed in switch :" + vp?.iModel.name)
+          currentPathCoordinates = E1;
+          break;
       }
-    });
-    const line: LineString3d = LineString3d.create();
-    // and the last camera point
-    currentPathCoordinates.forEach((item) => {
-        line.addPoint(new Point3d(item.cameraPoint.x + xOffset, item.cameraPoint.y + yOffset, item.cameraPoint.z + zOffset));
-    });
-    const path = CurveChainWithDistanceIndex.createCapture(Path.create(line));
-    if (path !== undefined) {
-      this._path = path;
-      this._targetPoints = targetPoints;
+
+      const targetPoints: Point3d[] = [];
+      const directions: Point3d[] = [];
+      const xOffset = 0;
+      const yOffset = 0;
+      const zOffset = 0;
+      let i = 0;
+      // we need to drop the first direction point
+      currentPathCoordinates.forEach((item) => {
+        if (i === 0) {
+          i = i + 1;
+        } else {
+          targetPoints.push(new Point3d(item.cameraPoint.x + xOffset, item.cameraPoint.y + yOffset, item.cameraPoint.z + zOffset));
+          directions.push(new Point3d(item.cameraPoint.x + xOffset, item.cameraPoint.y + yOffset, item.cameraPoint.z + zOffset));
+          i = i + 1;
+        }
+      });
+      const line: LineString3d = LineString3d.create();
+      // and the last camera point
+      currentPathCoordinates.forEach((item) => {
+          line.addPoint(new Point3d(item.cameraPoint.x + xOffset, item.cameraPoint.y + yOffset, item.cameraPoint.z + zOffset));
+      });
+      const path = CurveChainWithDistanceIndex.createCapture(Path.create(line));
+      if (path !== undefined) {
+        this._path = path;
+        this._targetPoints = targetPoints;
+      }
     }
-  }
+}
+
 
   public getLength() {
     if (!this._path)
@@ -147,7 +153,8 @@ export class CameraPath {
     // We are in between two points of the path, interpolate between the two points
     const prevTargetPoint = this._targetPoints[segmentIndex];
     const nextTargetPoint = this._targetPoints[segmentIndex + 1];
-    return prevTargetPoint.interpolate(segmentFraction, nextTargetPoint);
+    return nextTargetPoint;
+    /* return prevTargetPoint.interpolate(segmentFraction, nextTargetPoint); */
   }
 
   private _getSegmentIndexAndLocalFraction(detail: CurveLocationDetail, numPoints: number) {
