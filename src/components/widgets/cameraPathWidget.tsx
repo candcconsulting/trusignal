@@ -15,6 +15,7 @@ import { KeySet } from "@itwin/presentation-common";
 import { Presentation, SelectionChangeEventArgs } from "@itwin/presentation-frontend";
 import { Id64Arg, Id64String } from "@itwin/core-bentley";
 import { GeometryStreamIterator, GeometryStreamProps } from "@itwin/core-common";
+import { Point3d } from "@itwin/core-geometry";
 
 const speeds: SelectOption<number>[] = [
   { value: 2.23520, label: "5 Mph: Walking" },
@@ -78,9 +79,15 @@ const CameraPathWidget = () => {
         const geoStreamProps = temp.geom;
         const geoStream = GeometryStreamIterator.fromGeometricElement3d(temp);
         console.log(geoStream);
-        for (let segment in geoStream) {
-          console.log(segment)
-        }
+        const aTransform = geoStream["_localToWorld"]
+        console.log(aTransform.multiplyPoint3d({x: 0, y: 0, z:0}))
+        const tempStream = geoStream["geometryStream"];
+        const localPoints = tempStream[1];
+        const worldPoints = localPoints.lineString?.map( p => {
+          const aPoint = p as any;          
+          const wPoint = new Point3d(aPoint[0] as number, aPoint[1] as number, aPoint[2] as number)
+          return aTransform.multiplyPoint3d(wPoint)});
+        console.log(worldPoints);
       }
 
       
