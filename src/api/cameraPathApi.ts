@@ -3,7 +3,8 @@
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
 import { IModelApp, Viewport } from "@itwin/core-frontend";
-import { CurveChainWithDistanceIndex, CurveLocationDetail, LineString3d, Path, Point3d, Vector3d } from "@itwin/core-geometry";
+import { CurveChainWithDistanceIndex, CurveLocationDetail, LineString3d, Path, Point3d, Vector3d  } from "@itwin/core-geometry";
+import { Point } from "@itwin/core-react";
 import { E1, W1A, W3A, W3B, W4 } from "../routes/coordinates";
 
 export interface CameraPathPoint {
@@ -11,9 +12,10 @@ export interface CameraPathPoint {
   targetPoint: Point3d;
 }
 
+
 /** This class implements the interaction between the sample and the iTwin.js API.  No user interface. */
 export default class CameraPathApp {
-
+  
   public static changeCameraPositionAndTarget(cameraPoint: CameraPathPoint, viewport: Viewport, changeCameraTargetOnly: boolean = false) {
     if (viewport.view.is3d()) {
       if (changeCameraTargetOnly) {
@@ -37,6 +39,10 @@ export default class CameraPathApp {
 export class CameraPath {
   private _path: CurveChainWithDistanceIndex | undefined;
   private _targetPoints: Point3d[] = [];
+  private _xOffset = 0;
+  private _yOffset = 0;
+  private _zOffset = 0;
+
   
   constructor(public pathName: string) {
     if (pathName === "") {
@@ -77,26 +83,24 @@ export class CameraPath {
           break;
       }
 
+    
       const targetPoints: Point3d[] = [];
       const directions: Point3d[] = [];
-      const xOffset = 0;
-      const yOffset = 0;
-      const zOffset = 0;
       let i = 0;
       // we need to drop the first direction point
       currentPathCoordinates.forEach((item) => {
         if (i === 0) {
           i = i + 1;
         } else {
-          targetPoints.push(new Point3d(item.cameraPoint.x + xOffset, item.cameraPoint.y + yOffset, item.cameraPoint.z + zOffset));
-          directions.push(new Point3d(item.cameraPoint.x + xOffset, item.cameraPoint.y + yOffset, item.cameraPoint.z + zOffset));
+          targetPoints.push(new Point3d(item.cameraPoint.x , item.cameraPoint.y , item.cameraPoint.z ));
+          directions.push(new Point3d(item.cameraPoint.x , item.cameraPoint.y , item.cameraPoint.z ));
           i = i + 1;
         }
       });
       const line: LineString3d = LineString3d.create();
       // and the last camera point
       currentPathCoordinates.forEach((item) => {
-          line.addPoint(new Point3d(item.cameraPoint.x + xOffset, item.cameraPoint.y + yOffset, item.cameraPoint.z + zOffset));
+          line.addPoint(new Point3d(item.cameraPoint.x , item.cameraPoint.y, item.cameraPoint.z));
       });
       const path = CurveChainWithDistanceIndex.createCapture(Path.create(line));
       if (path !== undefined) {
@@ -105,7 +109,26 @@ export class CameraPath {
       }
     }
 }
+  public distanceXYZXYZ (x1 : number, y1 : number, z1 : number, x2 : number, y2 : number, z2 : number) {
+    return Math.sqrt(Math.pow(x2 - x1,2) + Math.pow(y2 - y1,2) + Math.pow(z2 - z1,2))
+  }
 
+  public setPathFromLine(line: LineString3d) {
+    const path = CurveChainWithDistanceIndex.createCapture(Path.create(line));
+    if (path !== undefined) {
+      this._path = path;      
+    }
+  }
+
+  public setStaticTarget(target : Point3d) {
+    const targetPoints: Point3d[] = [];
+    targetPoints.push(target);
+    this._targetPoints = targetPoints;
+  }
+
+  public clearTarget () {
+    this._targetPoints = [];
+  }
 
   public getLength() {
     if (!this._path)
@@ -125,12 +148,48 @@ export class CameraPath {
     if (!this._path)
       throw new Error("Path was not loaded");
 
-    const eyePoint = this._path.fractionToPoint(fraction);
-    const targetFraction = this._path.moveSignedDistanceFromFraction(fraction, 10, false).fraction;    
-    const targetPoint = this._path.fractionToPoint(targetFraction);
+    const tempeyePoint = this._path.fractionToPoint(fraction);
+    const targetFraction = this._path.moveSignedDistanceFromFraction(fraction, 10, false).fraction;        
+    let targetPoint = undefined;
+    if ((this._targetPoints.length === 1) && (this._targetPoints[0] !== undefined))
+    {
+      targetPoint = this._targetPoints[0]
+    } else
+    {
+      targetPoint = this._path.fractionToPoint(targetFraction);
+    }
     //const targetPoint = this._getTargetPoint(eyePoint);
-
+    const offsetEyePoint = new Point3d(tempeyePoint.x + this._xOffset, tempeyePoint.y + this._yOffset, tempeyePoint.z + this._zOffset)
+    const eyePoint = offsetEyePoint
     return { eyePoint, targetPoint };
+  }
+
+  public distanceToTarget(fraction: number) : number {
+    if (!this._path) {
+      throw new Error("Path was not loaded");
+      return 0}
+
+    const eyePoint = this._path.fractionToPoint(fraction);
+    const targetFraction = this._path.moveSignedDistanceFromFraction(fraction, 10, false).fraction;        
+    let targetPoint = undefined;
+    if ((this._targetPoints.length === 1) && (this._targetPoints[0] !== undefined))
+    {
+      targetPoint = this._targetPoints[0]
+    } else
+    {
+      targetPoint = this._path.fractionToPoint(targetFraction);
+    }
+    return this.distanceXYZXYZ(eyePoint.x, eyePoint.y, eyePoint.z, targetPoint.x, targetPoint.y, targetPoint.z  )
+  }
+
+  public xOffset(n: number) {
+    this._xOffset = n
+  }
+  public yOffset(n: number) {
+    this._yOffset = n
+  }
+  public zOffset(n: number) {
+    this._zOffset = n
   }
 
   private _getTargetPoint(point: Point3d) {

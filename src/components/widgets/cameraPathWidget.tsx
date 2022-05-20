@@ -5,17 +5,34 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AbstractWidgetProps, StagePanelLocation, StagePanelSection, UiItemsProvider, WidgetState } from "@itwin/appui-abstract";
 import { useActiveViewport } from "@itwin/appui-react";
-import { IModelApp } from "@itwin/core-frontend";
+import { IModelApp, ScreenViewport } from "@itwin/core-frontend";
 import { SvgPause, SvgPlay } from "@itwin/itwinui-icons-react";
-import { Alert, Button, IconButton, LabeledSelect, SelectOption, Slider } from "@itwin/itwinui-react";
+import { Alert, Button, IconButton, LabeledInput, LabeledSelect, SelectOption, Slider } from "@itwin/itwinui-react";
 import CameraPathApi, { CameraPath } from "../../api/cameraPathApi";
 import { CameraPathTool } from "../tools/cameraPathTool";
 import "./cameraPath.scss";
 import { KeySet } from "@itwin/presentation-common";
 import { Presentation, SelectionChangeEventArgs } from "@itwin/presentation-frontend";
-import { Id64Arg, Id64String } from "@itwin/core-bentley";
-import { GeometryStreamIterator, GeometryStreamProps } from "@itwin/core-common";
-import { Point3d } from "@itwin/core-geometry";
+import { Id64String } from "@itwin/core-bentley";
+import { BackgroundMapType, DisplayStyle3dSettingsProps, GeometricElement3dProps, GeometryStreamIterator, GeometryStreamProps, Placement3d, RenderMode, SkyBoxProps, TerrainHeightOriginMode, ViewFlagProps } from "@itwin/core-common";
+import { CurvePrimitive, LineString3d, Point3d } from "@itwin/core-geometry";
+
+const defaultSkyBox: SkyBoxProps = { display: true, twoColor: false, groundColor: 9741199, nadirColor: 5464143, skyColor: 16764303, zenithColor: 16741686 };
+
+const renderingStyleViewFlags: ViewFlagProps = {
+  noConstruct: true,
+  noCameraLights: false,
+  noSourceLights: false,
+  noSolarLight: false,
+  visEdges: false,
+  hidEdges: false,
+  shadows: false,
+  monochrome: false,
+  ambientOcclusion: false,
+  thematicDisplay: false,
+  renderMode: RenderMode.SmoothShade,
+};
+
 
 const speeds: SelectOption<number>[] = [
   { value: 2.23520, label: "5 Mph: Walking" },
@@ -38,10 +55,10 @@ const CameraPathWidget = () => {
   const [cameraPath, setCameraPath] = useState<CameraPath>(new CameraPath(paths[0].value));
   const [isPaused, setIsPaused] = useState<boolean>(true);
   const [sliderValue, setSliderValue] = useState<number>(0);
+  const [distanceValue, setDistanceValue] = useState<number>(0);
   const [speed, setSpeed] = useState<number>(speeds[0].value);
   const [elementsAreSelected, setElementsAreSelected] = useState<boolean>(false);
-  const selectedPathElements = useRef<KeySet>(new KeySet());
-  const selectedTargetElements = useRef<KeySet>(new KeySet());
+  const selectedElements = useRef<KeySet>(new KeySet());
   const [capturedPathElements, setCapturedPathElements] = useState<SelectedElement[]>([]);
   const [capturedTargetElements, setCapturedTargetElements] = useState<SelectedElement[]>([]);
   const [selectedTableRows, setSelectedTableRows] = useState<SelectedElement[]>([]);
@@ -49,7 +66,7 @@ const CameraPathWidget = () => {
 
 
   const _onSelectionChanged = (event: SelectionChangeEventArgs) => {
-    selectedPathElements.current = new KeySet(event.keys);
+    selectedElements.current = new KeySet(event.keys);
     setElementsAreSelected(!event.keys.isEmpty);
   };
 
@@ -63,48 +80,62 @@ const CameraPathWidget = () => {
   const capturePath = async () => {
     let elements: SelectedElement[] = [];
     const iModel = viewport?.iModel
-    selectedPathElements.current.instanceKeys.forEach((values, key) => {
+    selectedElements.current.instanceKeys.forEach((values, key) => {
       const classElements = Array.from(values)
         .filter((value) => capturedPathElements.find((e) => e.elementId === value) === undefined)
         .map((value) => ({ elementId: value, className: key }));
       elements = elements.concat(classElements);
     });
-
-    setCapturedPathElements(capturedPathElements.concat(elements));
+        setCapturedPathElements(capturedPathElements.concat(elements));
     if (iModel) {
       const element = elements[0].elementId as Id64String;
       const geoElement = await iModel.elements.loadProps(element, {wantGeometry : true});
       if (geoElement) {
         const temp: any = geoElement;
-        const geoStreamProps = temp.geom;
-        const geoStream = GeometryStreamIterator.fromGeometricElement3d(temp);
-        console.log(geoStream);
-        const aTransform = geoStream["_localToWorld"]
-        console.log(aTransform.multiplyPoint3d({x: 0, y: 0, z:0}))
-        const tempStream = geoStream["geometryStream"];
-        const localPoints = tempStream[1];
-        const worldPoints = localPoints.lineString?.map( p => {
-          const aPoint = p as any;          
-          const wPoint = new Point3d(aPoint[0] as number, aPoint[1] as number, aPoint[2] as number)
-          return aTransform.multiplyPoint3d(wPoint)});
-        console.log(worldPoints);
+        try {
+          const geoStream = GeometryStreamIterator.fromGeometricElement3d(temp);
+          for (const entry of geoStream) {
+            if ('geometryQuery' === entry.primitive.type) {
+              const geometry = entry.primitive.geometry;                
+                        // In here you can deal with the curve
+                        // There’s no reason to deal with individual points.
+                        // The cameraPath sample code just takes the input points and builds a curve anyway.
+              cameraPath.setPathFromLine(geometry as LineString3d)        
+            }
+          }
+        }
+        catch (error) {
+          const err = error as Error;
+          console.log(err.message)
+        }
       }
+    };
+    setSliderValue(0);
+  }
 
-      
-    }
-  };
-
-  const captureTarget = () => {
+  const captureTarget = async () => {
+    const iModel = viewport?.iModel
     let elements: SelectedElement[] = [];
 
-    selectedTargetElements.current.instanceKeys.forEach((values, key) => {
+    selectedElements.current.instanceKeys.forEach((values, key) => {
       const classElements = Array.from(values)
         .filter((value) => capturedPathElements.find((e) => e.elementId === value) === undefined)
         .map((value) => ({ elementId: value, className: key }));
       elements = elements.concat(classElements);
     });
 
-    setCapturedTargetElements(capturedTargetElements.concat(elements));
+    setCapturedTargetElements(capturedTargetElements.concat(elements)); 
+    let range: any;
+    const element = elements[0].elementId as Id64String;
+    const elemProps = (await iModel?.elements.getProps(element)) as GeometricElement3dProps[];
+      if (elemProps.length !== 0) {
+        elemProps.forEach((prop: GeometricElement3dProps) => {
+          const placement = Placement3d.fromJSON(prop.placement);
+          range = placement.calculateRange();
+          console.log(range)
+          cameraPath.setStaticTarget(range.high)
+        });
+      }
   };
 
   const onSelect = useCallback((rows: SelectedElement[] | undefined) => {
@@ -169,6 +200,12 @@ const CameraPathWidget = () => {
       });
   }, [_handleScrollPath]);
 
+  useEffect(() => {
+    if (viewport) {
+      getInitialView(viewport);
+    }
+  }, [viewport])
+
   /** Turn the camera on, and initialize the tool */
   useEffect(() => {
     if (viewport) {
@@ -188,15 +225,19 @@ const CameraPathWidget = () => {
     }
   }, [viewport, sliderValue, cameraPath, isPaused]);
 
+  useEffect (() => {
+    setDistanceValue(cameraPath.distanceToTarget(sliderValue))
+  }, [cameraPath, sliderValue])
+
   useEffect(() => {
     let animID: number;
     if (!isPaused && cameraPath && viewport) {
-      const animate = (currentPathFraction: number) => {
+      const animate = async (currentPathFraction: number) => {
         if (currentPathFraction < 1) {
           const nextPathFraction = cameraPath.advanceAlongPath(currentPathFraction, speed / 30);
           const nextPathPoint = cameraPath.getPathPoint(nextPathFraction);
           CameraPathApi.changeCameraPositionAndTarget(nextPathPoint, viewport, keyDown.current);
-          setSliderValue(nextPathFraction);
+          setSliderValue(nextPathFraction);          
           animID = requestAnimationFrame(() => {
             animate(nextPathFraction);
           });
@@ -228,6 +269,65 @@ const CameraPathWidget = () => {
     setIsPaused(!isPaused);
   };
 
+  const clearTarget = () => {
+    cameraPath.clearTarget();
+    setSliderValue(0);
+  }
+
+  const setTarget = () => {
+    const xPoint = document.getElementById('xPoint') as HTMLInputElement;
+    const yPoint = document.getElementById('yPoint') as HTMLInputElement;
+    const zPoint = document.getElementById('zPoint') as HTMLInputElement;
+    const XYZ = new Point3d(parseFloat(xPoint.value), parseFloat(yPoint.value), parseFloat(zPoint.value));
+    cameraPath.setStaticTarget(XYZ);
+  }
+
+  const getInitialView = async (vp: ScreenViewport) => {
+    // viewState.viewFlags.renderMode = RenderMode.SmoothShade;
+    // viewport?.overrideDisplayStyle(viewState.getDisplayStyle3d())
+    // why is W4 Geodetic
+
+    let terrainOrigin = TerrainHeightOriginMode.Geoid
+    if (vp.iModel.iModelId === "9e1eb16e-8c71-4880-9dc8-c107eb21cdd3" ){
+       terrainOrigin = TerrainHeightOriginMode.Geodetic } 
+    const displayStyle: DisplayStyle3dSettingsProps = {
+      environment: {
+        sky: defaultSkyBox,
+        ground: { display: false },
+      },
+      viewflags: { ...renderingStyleViewFlags, shadows: false, ambientOcclusion: false, visEdges: false, noWeight: true,},
+      backgroundMap: {
+        useDepthBuffer: false,
+        groundBias: 0,
+        providerName: "BingProvider",
+        providerData: {
+          mapType: BackgroundMapType.Hybrid,
+        },
+        applyTerrain: true,
+        transparency: 0.4,
+        terrainSettings: {
+          providerName: "CesiumWorldTerrain",
+          applyLighting: false,
+          heightOrigin: 0.0,
+          exaggeration: 1.0,
+          heightOriginMode: terrainOrigin,
+        },
+      }
+    };
+    // displayStyle.changeBackgroundMapProps({ applyTerrain: true })
+    //      displayStyle.backgroundMapSettings = BackgroundMapSettings.fromJSON({
+    //        applyTerrain: true,
+    //        useDepthBuffer: false,
+    //        transparency: 1,
+    //        terrainSettings: TerrainSettings.fromJSON({ heightOrigin: 1, heightOriginMode: TerrainHeightOriginMode.Geoid }),
+    //      });
+
+    vp!.overrideDisplayStyle(displayStyle);
+    return;
+
+  }
+
+
   // Handle the Path Change
   const _onChangeRenderPath = (pathName: string) => {
     setSliderValue(0);
@@ -238,10 +338,25 @@ const CameraPathWidget = () => {
   return (
     <div className="sample-options">
       <div className="sample-grid">
-        <Button onClick={capturePath} disabled={!elementsAreSelected}>Pick Path</Button>
-        <Button onClick={captureTarget} disabled={!elementsAreSelected}>Pick Target</Button>
+      <div className="grid-item">
+        <Button onClick={capturePath} disabled={!elementsAreSelected}>Set Path</Button>
+        <Button onClick={captureTarget} disabled={!elementsAreSelected}>Set Target</Button>
+        <Button onClick={setTarget}>Set XYZ</Button>
+        <Button onClick={clearTarget} >Clear Target</Button>
+      </div>
+      <div className="grid-item">
+        <LabeledInput displayStyle = "inline" label = "X" id = "xPoint" width = "50"></LabeledInput>
+        <LabeledInput displayStyle = "inline" label = "Y" id = "yPoint" width = "50"></LabeledInput>
+        <LabeledInput displayStyle = "inline" label = "Z" id = "zPoint" width = "50"></LabeledInput>
+      </div>
+      <div className="grid-item">
+        <LabeledInput displayStyle = "inline" label = "X Offset" id = "xOffset" onChange = {e => cameraPath.xOffset(parseFloat(e.target.value))} width = "50"></LabeledInput>
+        <LabeledInput displayStyle = "inline" label = "Y Offset" id = "yOffset" onChange = {e => cameraPath.yOffset(parseFloat(e.target.value))} width = "50"></LabeledInput>
+        <LabeledInput displayStyle = "inline" label = "Z Offset" id = "zOffset" onChange = {e => cameraPath.zOffset(parseFloat(e.target.value))} width = "50"></LabeledInput>
+      </div>
         <div></div>
         <LabeledSelect label="Path:" size="small" displayStyle="inline" options={paths} value={cameraPath.pathName} onChange={_onChangeRenderPath} onShow={undefined} onHide={undefined} />
+        <LabeledInput disabled={true} value={distanceValue.toFixed(3)}></LabeledInput>
         <div className="sample-options-control">
           <LabeledSelect label="Speed:" size="small" displayStyle="inline" options={speeds} value={speed} onChange={setSpeed} onShow={undefined} onHide={undefined} />
           <IconButton size="small" onClick={_handleCameraPlay} >
