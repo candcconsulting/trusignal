@@ -56,7 +56,7 @@ export class CameraPath {
         case "ZZ.TRU East - E1 Signal Sighting":
           currentPathCoordinates = E1;
           break;
-        case "AA1. TRU East E1 - ECML16 - Coordination/Shared Model":
+        case "AA. TRU East E1 - Coordination/Shared Model":
           currentPathCoordinates = E1;
           break;
         case "AG. TRU West - W1A - Coordination/Shared Model":
@@ -78,7 +78,7 @@ export class CameraPath {
           currentPathCoordinates = W4;
           break;
         default:
-          console.log("Model not listed in switch :" + vp?.iModel.name)
+          console.log("Model not listed in switch :<" + vp?.iModel.name + ">")
           currentPathCoordinates = E1;
           break;
       }

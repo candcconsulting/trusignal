@@ -286,7 +286,7 @@ const CameraPathWidget = () => {
     // viewState.viewFlags.renderMode = RenderMode.SmoothShade;
     // viewport?.overrideDisplayStyle(viewState.getDisplayStyle3d())
     // why is W4 Geodetic
-
+  
     let terrainOrigin = TerrainHeightOriginMode.Geoid
     if (vp.iModel.iModelId === "9e1eb16e-8c71-4880-9dc8-c107eb21cdd3" ){
        terrainOrigin = TerrainHeightOriginMode.Geodetic } 
@@ -295,7 +295,7 @@ const CameraPathWidget = () => {
         sky: defaultSkyBox,
         ground: { display: false },
       },
-      viewflags: { ...renderingStyleViewFlags, shadows: false, ambientOcclusion: false, visEdges: false, noWeight: true,},
+      viewflags: { ...renderingStyleViewFlags, shadows: false, ambientOcclusion: true, visEdges: false, noWeight: true,},
       backgroundMap: {
         useDepthBuffer: false,
         groundBias: 0,
@@ -322,7 +322,8 @@ const CameraPathWidget = () => {
     //        terrainSettings: TerrainSettings.fromJSON({ heightOrigin: 1, heightOriginMode: TerrainHeightOriginMode.Geoid }),
     //      });
 
-    vp!.overrideDisplayStyle(displayStyle);
+    vp!.overrideDisplayStyle(displayStyle);    
+    vp!.displayStyle.setOSMBuildingDisplay({ onOff: true });    
     return;
 
   }

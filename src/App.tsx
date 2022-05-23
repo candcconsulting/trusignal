@@ -23,6 +23,7 @@ import { history } from "./history";
 import { ThemeButton } from "./helper/ThemeButton";
 import { BentleyAPIFunctions } from "./helper/BentleyAPIFunctions";
 import { CameraPathWidgetProvider } from "./components/widgets/cameraPathWidget";
+import { initialiseapitokens, mapLayerOptions, tileAdminOptions } from "./api/maptokens";
 
 const App: React.FC = () => {
   const [iModelId, setIModelId] = useState(process.env.IMJS_IMODEL_ID);
@@ -144,7 +145,7 @@ const App: React.FC = () => {
           );
         }
       }
-
+      initialiseapitokens();
       if (iModelId) {
         /* setIModelId(urlParams.get("iModelId") as string); */
         BentleyAPIFunctions.getImodelData(authClient, iModelId).then(iModelData => {
@@ -293,6 +294,8 @@ useEffect(() => {
         enablePerformanceMonitors={true} // see description in the README (https://www.npmjs.com/package/@itwin/desktop-viewer-react)
         uiProviders={[ new CameraPathWidgetProvider]}
         onIModelConnected = {iModelConnected}
+        mapLayerOptions = {mapLayerOptions}
+        tileAdminOptions = {tileAdminOptions}
       />
     </div>
   </div>
