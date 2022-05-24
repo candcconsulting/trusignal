@@ -5,17 +5,20 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AbstractWidgetProps, StagePanelLocation, StagePanelSection, UiItemsProvider, WidgetState } from "@itwin/appui-abstract";
 import { useActiveViewport } from "@itwin/appui-react";
-import { IModelApp, ScreenViewport } from "@itwin/core-frontend";
+import { EmphasizeElements, IModelApp, ScreenViewport } from "@itwin/core-frontend";
 import { SvgPause, SvgPlay } from "@itwin/itwinui-icons-react";
-import { Alert, Button, IconButton, LabeledInput, LabeledSelect, SelectOption, Slider } from "@itwin/itwinui-react";
+import { Alert, Button, IconButton, LabeledInput, LabeledSelect, SelectOption, Slider, ToggleSwitch } from "@itwin/itwinui-react";
 import CameraPathApi, { CameraPath } from "../../api/cameraPathApi";
 import { CameraPathTool } from "../tools/cameraPathTool";
 import "./cameraPath.scss";
 import { KeySet } from "@itwin/presentation-common";
 import { Presentation, SelectionChangeEventArgs } from "@itwin/presentation-frontend";
 import { Id64String } from "@itwin/core-bentley";
-import { BackgroundMapType, DisplayStyle3dSettingsProps, GeometricElement3dProps, GeometryStreamIterator, GeometryStreamProps, Placement3d, RenderMode, SkyBoxProps, TerrainHeightOriginMode, ViewFlagProps } from "@itwin/core-common";
-import { CurvePrimitive, LineString3d, Point3d } from "@itwin/core-geometry";
+import { BackgroundMapType, ColorDef, DisplayStyle3dSettingsProps, FeatureAppearance, GeometricElement3dProps, GeometryStreamIterator, Placement3d, RenderMode, SkyBoxProps, TerrainHeightOriginMode, ViewFlagProps } from "@itwin/core-common";
+import { Cone, LineString3d, Point3d, PolyfaceBuilder, StrokeOptions } from "@itwin/core-geometry";
+import { getClassifiedElements, getSpatialElements, SectionOfColoring } from "../../api/elementsApi";
+import { VolumeQueryApi } from "../../api/VolumeQueryApi";
+import { GeometryDecorator } from "../../utils/GeometryDecorator";
 
 const defaultSkyBox: SkyBoxProps = { display: true, twoColor: false, groundColor: 9741199, nadirColor: 5464143, skyColor: 16764303, zenithColor: 16741686 };
 
@@ -61,14 +64,31 @@ const CameraPathWidget = () => {
   const selectedElements = useRef<KeySet>(new KeySet());
   const [capturedPathElements, setCapturedPathElements] = useState<SelectedElement[]>([]);
   const [capturedTargetElements, setCapturedTargetElements] = useState<SelectedElement[]>([]);
-  const [selectedTableRows, setSelectedTableRows] = useState<SelectedElement[]>([]);
+  const [volumeBoxState, setVolumeBoxState] = React.useState<boolean>(true);
   const iModelConnection = viewport?.iModel
+  const [decoratorState, setDecoratorState] = React.useState<GeometryDecorator>();
 
+
+  // private functions
 
   const _onSelectionChanged = (event: SelectionChangeEventArgs) => {
     selectedElements.current = new KeySet(event.keys);
     setElementsAreSelected(!event.keys.isEmpty);
   };
+
+  const _onChangeCameraSliderValue = (sliderNumber: number) => {
+    setIsPaused(true);
+    setSliderValue(sliderNumber);
+  };
+
+  // Update the States for the Play / Pause button click event
+  const _handleCameraPlay = () => {
+    if (sliderValue >= 1) {
+      setSliderValue(0);
+    }
+    setIsPaused(!isPaused);
+  };
+
 
   useEffect(() => {
     // Subscribe for unified selection changes
@@ -77,6 +97,67 @@ const CameraPathWidget = () => {
     Presentation.selection.selectionChange.addListener(_onSelectionChanged);
   }, []);
 
+  const keyDown = useRef<boolean>(false);
+
+  /** Initialize the camera namespace on widget load */
+  useEffect(() => {
+    void IModelApp.localization.registerNamespace("camera-i18n-namespace");
+    CameraPathTool.register("camera-i18n-namespace");
+
+    return () => {
+      IModelApp.localization.unregisterNamespace("camera-i18n-namespace");
+      IModelApp.tools.unRegister(CameraPathTool.toolId);
+    };
+  }, []);
+
+
+  const _handleScrollPath = useCallback(async (eventDeltaY: number) => {
+    if (viewport === undefined || cameraPath === undefined)
+      return;
+    setSliderValue((prevSliderValue) => {
+      if (((prevSliderValue === 1) && (eventDeltaY > 0)) || ((prevSliderValue === 0) && (eventDeltaY < 0)))
+        return prevSliderValue;
+
+      const stepLength = (cameraPath.getLength() / 10) / 30;
+      let cameraPathIterationValue: number = prevSliderValue;
+
+      if (eventDeltaY > 0)
+        cameraPathIterationValue += 0.009;
+      else
+        cameraPathIterationValue -= 0.009;
+
+      // If we go over
+      if (cameraPathIterationValue > 1) cameraPathIterationValue = 1;
+      if (cameraPathIterationValue < 0) cameraPathIterationValue = 0;
+
+      setIsPaused(true);
+      const nextPathFraction = cameraPath.advanceAlongPath(cameraPathIterationValue, stepLength);
+      const nextPathPoint = cameraPath.getPathPoint(nextPathFraction);
+      CameraPathApi.changeCameraPositionAndTarget(nextPathPoint, viewport, keyDown.current);
+
+      return nextPathFraction;
+    });
+  }, [viewport, cameraPath, keyDown]);
+
+  const handleScrollAnimation = useCallback((eventDeltaY: number) => {
+    setIsPaused(true);
+    _handleScrollPath(eventDeltaY)
+      .catch((error) => {
+        // eslint-disable-next-line no-console
+        console.error(error);
+      });
+  }, [_handleScrollPath]);
+
+  const onSelect = useCallback((rows: SelectedElement[] | undefined) => {
+    const _rows = rows || [];    
+    if (iModelConnection) {
+      iModelConnection.selectionSet.replace(_rows.map((m) => m.elementId));
+    }
+  }, [iModelConnection]);
+
+
+  // button code
+  
   const capturePath = async () => {
     let elements: SelectedElement[] = [];
     const iModel = viewport?.iModel
@@ -138,140 +219,58 @@ const CameraPathWidget = () => {
       }
   };
 
-  const onSelect = useCallback((rows: SelectedElement[] | undefined) => {
-    const _rows = rows || [];
-    setSelectedTableRows(_rows);
-    if (iModelConnection) {
-      iModelConnection.selectionSet.replace(_rows.map((m) => m.elementId));
-    }
-  }, [iModelConnection]);
-
-  const keyDown = useRef<boolean>(false);
-
-  /** Initialize the camera namespace on widget load */
-  useEffect(() => {
-    void IModelApp.localization.registerNamespace("camera-i18n-namespace");
-    CameraPathTool.register("camera-i18n-namespace");
-
-    return () => {
-      IModelApp.localization.unregisterNamespace("camera-i18n-namespace");
-      IModelApp.tools.unRegister(CameraPathTool.toolId);
-    };
-  }, []);
-
-  const handleUnlockDirection = (isKeyDown: boolean) => {
-    keyDown.current = isKeyDown;
-  };
-
-  const _handleScrollPath = useCallback(async (eventDeltaY: number) => {
-    if (viewport === undefined || cameraPath === undefined)
-      return;
-    setSliderValue((prevSliderValue) => {
-      if (((prevSliderValue === 1) && (eventDeltaY > 0)) || ((prevSliderValue === 0) && (eventDeltaY < 0)))
-        return prevSliderValue;
-
-      const stepLength = (cameraPath.getLength() / 10) / 30;
-      let cameraPathIterationValue: number = prevSliderValue;
-
-      if (eventDeltaY > 0)
-        cameraPathIterationValue += 0.009;
-      else
-        cameraPathIterationValue -= 0.009;
-
-      // If we go over
-      if (cameraPathIterationValue > 1) cameraPathIterationValue = 1;
-      if (cameraPathIterationValue < 0) cameraPathIterationValue = 0;
-
-      setIsPaused(true);
-      const nextPathFraction = cameraPath.advanceAlongPath(cameraPathIterationValue, stepLength);
-      const nextPathPoint = cameraPath.getPathPoint(nextPathFraction);
-      CameraPathApi.changeCameraPositionAndTarget(nextPathPoint, viewport, keyDown.current);
-
-      return nextPathFraction;
-    });
-  }, [viewport, cameraPath, keyDown]);
-
-  const handleScrollAnimation = useCallback((eventDeltaY: number) => {
-    setIsPaused(true);
-    _handleScrollPath(eventDeltaY)
-      .catch((error) => {
-        // eslint-disable-next-line no-console
-        console.error(error);
-      });
-  }, [_handleScrollPath]);
-
-  useEffect(() => {
-    if (viewport) {
-      getInitialView(viewport);
-    }
-  }, [viewport])
-
-  /** Turn the camera on, and initialize the tool */
-  useEffect(() => {
-    if (viewport) {
-      CameraPathApi.prepareView(viewport);
-
-      // We will use this method to activate the CameraPathTool
-      // The CameraPathTool will prevent the view tool and standard mouse events
-      setTimeout(() => { void IModelApp.tools.run(CameraPathTool.toolId, handleScrollAnimation, handleUnlockDirection); }, 10);
-    }
-  }, [handleScrollAnimation, viewport]);
-
-  /** When the slider Value is changed, change the view to reflect the position in the path */
-  useEffect(() => {
-    if (viewport && cameraPath && isPaused) {
-      const nextPathPoint = cameraPath.getPathPoint(sliderValue);
-      CameraPathApi.changeCameraPositionAndTarget(nextPathPoint, viewport);
-    }
-  }, [viewport, sliderValue, cameraPath, isPaused]);
-
-  useEffect (() => {
-    setDistanceValue(cameraPath.distanceToTarget(sliderValue))
-  }, [cameraPath, sliderValue])
-
-  useEffect(() => {
-    let animID: number;
-    if (!isPaused && cameraPath && viewport) {
-      const animate = async (currentPathFraction: number) => {
-        if (currentPathFraction < 1) {
-          const nextPathFraction = cameraPath.advanceAlongPath(currentPathFraction, speed / 30);
-          const nextPathPoint = cameraPath.getPathPoint(nextPathFraction);
-          CameraPathApi.changeCameraPositionAndTarget(nextPathPoint, viewport, keyDown.current);
-          setSliderValue(nextPathFraction);          
-          animID = requestAnimationFrame(() => {
-            animate(nextPathFraction);
-          });
-        } else {
-          setIsPaused(true);
-        }
-      };
-      animID = requestAnimationFrame(() => animate(sliderValue));
-    }
-    return () => {
-      if (animID) {
-        cancelAnimationFrame(animID);
-      }
-    };
-    // This effect should NOT be called when the sliderValue is changed because the animate value sets the slider value. It is only needed on initial call.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cameraPath, speed, isPaused, viewport]);
-
-  const _onChangeCameraSliderValue = (sliderNumber: number) => {
-    setIsPaused(true);
-    setSliderValue(sliderNumber);
-  };
-
-  // Update the States for the Play / Pause button click event
-  const _handleCameraPlay = () => {
-    if (sliderValue >= 1) {
-      setSliderValue(0);
-    }
-    setIsPaused(!isPaused);
-  };
-
   const clearTarget = () => {
     cameraPath.clearTarget();
     setSliderValue(0);
+  }
+
+  const validateTarget = async () => {
+    if (!viewport) {
+      return;
+    }
+    if (decoratorState)
+      IModelApp.viewManager.dropDecorator(decoratorState);
+
+    VolumeQueryApi.clearClips(viewport);
+
+    const colors = {
+      [SectionOfColoring.InsideTheBox]: ColorDef.red,
+      [SectionOfColoring.Overlap]: ColorDef.blue,
+      [SectionOfColoring.OutsideTheBox]: ColorDef.white,
+    };
+    const aCameraPoint = cameraPath.getPathPoint(sliderValue);
+    const radius = .15;
+    const aCone = Cone.createAxisPoints(aCameraPoint.eyePoint, aCameraPoint.targetPoint, radius, radius, true);
+    const decorator = new GeometryDecorator();
+    setDecoratorState(decorator);
+    if (!aCone) {
+      console.log ("could not make cone");
+      return;
+    }
+    console.log("Cone created : @", aCameraPoint.eyePoint, aCameraPoint.targetPoint, " radius : ", radius )
+    decorator.clearGeometry();
+    const options = StrokeOptions.createForCurves();
+    options.needParams = false;
+    options.needNormals = false;
+    const builder = PolyfaceBuilder.create(options);
+    builder.addCone(aCone);
+    const polyface = builder.claimPolyface(false);
+    decorator.setColor(ColorDef.green);
+    decorator.addGeometry(polyface)
+    IModelApp.viewManager.addDecorator(decorator);
+    const checkRange = (aCone?.range());
+    console.log("Checking elements inside range ", checkRange)
+    const candidates = await getSpatialElements(viewport.iModel, checkRange );
+    const classifiedElements = await getClassifiedElements(viewport, viewport.iModel, candidates, checkRange);
+    if (!classifiedElements) {
+      console.log("no classified elements found")
+      return;
+    }
+    EmphasizeElements.getOrCreate(viewport).overrideElements(classifiedElements[SectionOfColoring.InsideTheBox].map((x) => x.id), viewport, colors[SectionOfColoring.InsideTheBox]);
+    EmphasizeElements.getOrCreate(viewport).overrideElements(classifiedElements[SectionOfColoring.Overlap].map((x) => x.id), viewport, colors[SectionOfColoring.Overlap]);
+    /* All elements that are not overridden are outside the box by default. So to color them we don't need to have elements ids.
+    This is done so we would not need to query large amount of elements that are outside the box */
+    EmphasizeElements.getOrCreate(viewport).defaultAppearance = FeatureAppearance.fromRgb(colors[SectionOfColoring.OutsideTheBox]);
   }
 
   const setTarget = () => {
@@ -344,11 +343,16 @@ const CameraPathWidget = () => {
         <Button onClick={captureTarget} disabled={!elementsAreSelected}>Set Target</Button>
         <Button onClick={setTarget}>Set XYZ</Button>
         <Button onClick={clearTarget} >Clear Target</Button>
+        <Button onClick={validateTarget} >Validate Target</Button>
+        <ToggleSwitch label="Show Volume Box" checked={volumeBoxState} onChange={() => setVolumeBoxState((state) => !state)}  />
+
+
       </div>
       <div className="grid-item">
         <LabeledInput displayStyle = "inline" label = "X" id = "xPoint" width = "50"></LabeledInput>
         <LabeledInput displayStyle = "inline" label = "Y" id = "yPoint" width = "50"></LabeledInput>
         <LabeledInput displayStyle = "inline" label = "Z" id = "zPoint" width = "50"></LabeledInput>
+
       </div>
       <div className="grid-item">
         <LabeledInput displayStyle = "inline" label = "X Offset" id = "xOffset" onChange = {e => cameraPath.xOffset(parseFloat(e.target.value))} width = "50"></LabeledInput>

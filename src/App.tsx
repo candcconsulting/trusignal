@@ -6,11 +6,12 @@
 import "./App.scss";
 
 import { BrowserAuthorizationClient } from "@itwin/browser-authorization";
-import type { IModelConnection, ScreenViewport } from "@itwin/core-frontend";
+import { IModelConnection, ScreenViewport, Viewport, ViewState } from "@itwin/core-frontend";
 import { FitViewTool, IModelApp, StandardViewId } from "@itwin/core-frontend";
 import { FillCentered } from "@itwin/core-react";
 import { Header, HeaderBreadcrumbs, HeaderButton, HeaderLogo, IconButton, MenuItem, ProgressLinear, UserIcon } from "@itwin/itwinui-react";
 import { SvgImodel, SvgNetwork,  SvgSettings } from "@itwin/itwinui-icons-react";
+import {viewWithUnifiedSelection} from "@itwin/presentation-components"
 
 import {
   useAccessToken,
@@ -24,6 +25,16 @@ import { ThemeButton } from "./helper/ThemeButton";
 import { BentleyAPIFunctions } from "./helper/BentleyAPIFunctions";
 import { CameraPathWidgetProvider } from "./components/widgets/cameraPathWidget";
 import { initialiseapitokens, mapLayerOptions, tileAdminOptions } from "./api/maptokens";
+import { IModelViewportControlOptions, useActiveViewport } from "@itwin/appui-react";
+import { Id64 } from "@itwin/core-bentley";
+import ReactDOM from "react-dom";
+import { ViewportComponent } from "@itwin/imodel-components-react";
+
+const SimpleViewport = viewWithUnifiedSelection(ViewportComponent);
+const windowElement = document.createElement("div");
+  windowElement.id = "portal";
+  windowElement.style.width = "600px";
+  windowElement.style.height = "400px";
 
 const App: React.FC = () => {
   const [iModelId, setIModelId] = useState(process.env.IMJS_IMODEL_ID);
@@ -33,6 +44,10 @@ const App: React.FC = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const accessToken = useAccessToken();
+  const [viewportOptions, setViewportOptions] = useState<IModelViewportControlOptions>();
+  const [viewState, setViewEffect] = useState<ViewState | undefined>();
+  const [windowReady, setPopup] = useState<boolean>(false);
+
 
   const authClient = useMemo(
     () =>
@@ -121,6 +136,23 @@ const App: React.FC = () => {
     }
   },[selectedProject, authClient, handleIModelChange, iModelId])
 
+  useEffect(() => {
+    console.debug("Mount");
+    const popup = window.open("","Viewport", "resizable,width=600,height=400,left=200,top=200");
+    if (popup) {
+      popup.document.body.appendChild(windowElement);
+      setPopup(true);
+      return () => {
+        popup.document.removeChild(windowElement);
+        popup.close();
+      };
+    } else {
+      alert("Window is NULL. Please allow popup on this page.");
+    }
+    return () => {};
+  }, []);
+
+
 
   useEffect(() => {
     void login();
@@ -184,6 +216,17 @@ useEffect(() => {
     IModelApp.quantityFormatter.setActiveUnitSystem("metric", true);
     setIsOpen(true);
   }, [])
+
+  const _oniModelReady = async (iModelConnection: IModelConnection) => {
+    console.debug("iModelReady");
+    const defaultViewId = await iModelConnection?.views?.queryDefaultViewId();
+    if (defaultViewId && Id64.isValidId64(defaultViewId)) {
+      await setViewEffect(await iModelConnection?.views.load(defaultViewId))      
+      setViewportOptions({ viewState });
+    };
+  
+  };
+
 
   /** NOTE: This function will execute the "Fit View" tool after the iModel is loaded into the Viewer.
    * This will provide an "optimal" view of the model. However, it will override any default views that are
@@ -298,6 +341,15 @@ useEffect(() => {
         tileAdminOptions = {tileAdminOptions}
       />
     </div>
+    {viewState && windowReady &&
+        ReactDOM.createPortal(
+          (<div style={{ height: "400px", width: "600px"}}><SimpleViewport
+            style={{ flexGrow: 1, height: "400px", width: "600px" }}
+            imodel={viewState!.iModel}
+            viewState={viewState}
+          /></div>),
+          windowElement,
+        )}
   </div>
   );
 };
