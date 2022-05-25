@@ -89,27 +89,11 @@ const CameraPathWidget = () => {
     setIsPaused(!isPaused);
   };
 
-
-  useEffect(() => {
-    // Subscribe for unified selection changes
-    // Change the default selection scope. Top-assembly scope returns key of selected element's topmost parent element (or just the element if it has no parents)
-    Presentation.selection.scopes.activeScope = "top-assembly";
-    Presentation.selection.selectionChange.addListener(_onSelectionChanged);
-  }, []);
-
   const keyDown = useRef<boolean>(false);
 
-  /** Initialize the camera namespace on widget load */
-  useEffect(() => {
-    void IModelApp.localization.registerNamespace("camera-i18n-namespace");
-    CameraPathTool.register("camera-i18n-namespace");
-
-    return () => {
-      IModelApp.localization.unregisterNamespace("camera-i18n-namespace");
-      IModelApp.tools.unRegister(CameraPathTool.toolId);
-    };
-  }, []);
-
+  const handleUnlockDirection = (isKeyDown: boolean) => {
+    keyDown.current = isKeyDown;
+  };
 
   const _handleScrollPath = useCallback(async (eventDeltaY: number) => {
     if (viewport === undefined || cameraPath === undefined)
@@ -148,12 +132,76 @@ const CameraPathWidget = () => {
       });
   }, [_handleScrollPath]);
 
-  const onSelect = useCallback((rows: SelectedElement[] | undefined) => {
-    const _rows = rows || [];    
-    if (iModelConnection) {
-      iModelConnection.selectionSet.replace(_rows.map((m) => m.elementId));
+  /** Turn the camera on, and initialize the tool */
+  useEffect(() => {
+    if (viewport) {
+      CameraPathApi.prepareView(viewport);
+
+      // We will use this method to activate the CameraPathTool
+      // The CameraPathTool will prevent the view tool and standard mouse events
+      setTimeout(() => { void IModelApp.tools.run(CameraPathTool.toolId, handleScrollAnimation, handleUnlockDirection); }, 10);
     }
-  }, [iModelConnection]);
+  }, [handleScrollAnimation, viewport]);
+
+useEffect(() => {
+  setDistanceValue(cameraPath.distanceToTarget(sliderValue))
+}, [cameraPath, sliderValue]);
+
+  /** When the slider Value is changed, change the view to reflect the position in the path */
+  useEffect(() => {
+    if (viewport && cameraPath && isPaused) {
+      const nextPathPoint = cameraPath.getPathPoint(sliderValue);
+      CameraPathApi.changeCameraPositionAndTarget(nextPathPoint, viewport);
+    }
+  }, [viewport, sliderValue, cameraPath, isPaused]);
+
+  useEffect(() => {
+    let animID: number;
+    if (!isPaused && cameraPath && viewport) {
+      const animate = (currentPathFraction: number) => {
+        if (currentPathFraction < 1) {
+          const nextPathFraction = cameraPath.advanceAlongPath(currentPathFraction, speed / 30);
+          const nextPathPoint = cameraPath.getPathPoint(nextPathFraction);
+          CameraPathApi.changeCameraPositionAndTarget(nextPathPoint, viewport, keyDown.current);
+          setSliderValue(nextPathFraction);
+          animID = requestAnimationFrame(() => {
+            animate(nextPathFraction);
+          });
+        } else {
+          setIsPaused(true);
+        }
+      };
+      animID = requestAnimationFrame(() => animate(sliderValue));
+    }
+    return () => {
+      if (animID) {
+        cancelAnimationFrame(animID);
+      }
+    };
+    // This effect should NOT be called when the sliderValue is changed because the animate value sets the slider value. It is only needed on initial call.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cameraPath, speed, isPaused, viewport]);
+
+
+  useEffect(() => {
+    // Subscribe for unified selection changes
+    // Change the default selection scope. Top-assembly scope returns key of selected element's topmost parent element (or just the element if it has no parents)
+    Presentation.selection.scopes.activeScope = "top-assembly";
+    Presentation.selection.selectionChange.addListener(_onSelectionChanged);
+  }, []);
+
+  
+
+  /** Initialize the camera namespace on widget load */
+  useEffect(() => {
+    void IModelApp.localization.registerNamespace("camera-i18n-namespace");
+    CameraPathTool.register("camera-i18n-namespace");
+
+    return () => {
+      IModelApp.localization.unregisterNamespace("camera-i18n-namespace");
+      IModelApp.tools.unRegister(CameraPathTool.toolId);
+    };
+  }, []);
 
 
   // button code
@@ -193,6 +241,30 @@ const CameraPathWidget = () => {
     };
     setSliderValue(0);
   }
+  const showProps = async () => {
+    const iModel = viewport?.iModel
+    let elements: SelectedElement[] = [];
+
+    selectedElements.current.instanceKeys.forEach((values, key) => {
+      const classElements = Array.from(values)
+        .filter((value) => capturedPathElements.find((e) => e.elementId === value) === undefined)
+        .map((value) => ({ elementId: value, className: key }));
+      elements = elements.concat(classElements);
+    });
+
+    const element = elements[0].elementId as Id64String;
+    const elemProps = (await iModel?.elements.getProps(element)) as GeometricElement3dProps[];
+    console.log(elemProps)      
+    if (elemProps.length !== 0) {
+      elemProps.forEach((prop: GeometricElement3dProps) => {
+        const placement = Placement3d.fromJSON(prop.placement);
+        const range = placement.calculateRange();
+        console.log(range)    
+      })
+    }
+  }
+
+
 
   const captureTarget = async () => {
     const iModel = viewport?.iModel
@@ -341,6 +413,7 @@ const CameraPathWidget = () => {
       <div className="grid-item">
         <Button onClick={capturePath} disabled={!elementsAreSelected}>Set Path</Button>
         <Button onClick={captureTarget} disabled={!elementsAreSelected}>Set Target</Button>
+        <Button onClick={showProps} disabled={!elementsAreSelected}>Show Properties</Button>
         <Button onClick={setTarget}>Set XYZ</Button>
         <Button onClick={clearTarget} >Clear Target</Button>
         <Button onClick={validateTarget} >Validate Target</Button>
