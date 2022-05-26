@@ -5,7 +5,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AbstractWidgetProps, StagePanelLocation, StagePanelSection, UiItemsProvider, WidgetState } from "@itwin/appui-abstract";
 import { useActiveViewport } from "@itwin/appui-react";
-import { EmphasizeElements, IModelApp, ScreenViewport } from "@itwin/core-frontend";
+import { EmphasizeElements, IModelApp, rangeToCartographicArea, ScreenViewport } from "@itwin/core-frontend";
 import { SvgPause, SvgPlay } from "@itwin/itwinui-icons-react";
 import { Alert, Button, IconButton, LabeledInput, LabeledSelect, SelectOption, Slider, ToggleSwitch } from "@itwin/itwinui-react";
 import CameraPathApi, { CameraPath } from "../../api/cameraPathApi";
@@ -16,7 +16,7 @@ import { Presentation, SelectionChangeEventArgs } from "@itwin/presentation-fron
 import { Id64String } from "@itwin/core-bentley";
 import { BackgroundMapType, ColorDef, DisplayStyle3dSettingsProps, FeatureAppearance, GeometricElement3dProps, GeometryStreamIterator, Placement3d, RenderMode, SkyBoxProps, TerrainHeightOriginMode, ViewFlagProps } from "@itwin/core-common";
 import { Cone, LineString3d, Point3d, PolyfaceBuilder, StrokeOptions } from "@itwin/core-geometry";
-import { getClassifiedElements, getSpatialElements, SectionOfColoring } from "../../api/elementsApi";
+import { createRange, getClassifiedElements, getSpatialElements, SectionOfColoring } from "../../api/elementsApi";
 import { VolumeQueryApi } from "../../api/VolumeQueryApi";
 import { GeometryDecorator } from "../../utils/GeometryDecorator";
 
@@ -135,6 +135,7 @@ const CameraPathWidget = () => {
   /** Turn the camera on, and initialize the tool */
   useEffect(() => {
     if (viewport) {
+      setInitialView(viewport);
       CameraPathApi.prepareView(viewport);
 
       // We will use this method to activate the CameraPathTool
@@ -313,9 +314,10 @@ useEffect(() => {
     const aCameraPoint = cameraPath.getPathPoint(sliderValue);
     const radius = .15;
     const aCone = Cone.createAxisPoints(aCameraPoint.eyePoint, aCameraPoint.targetPoint, radius, radius, true);
+
     const decorator = new GeometryDecorator();
     setDecoratorState(decorator);
-    if (!aCone) {
+  if (!aCone) {
       console.log ("could not make cone");
       return;
     }
@@ -325,15 +327,25 @@ useEffect(() => {
     options.needParams = false;
     options.needNormals = false;
     const builder = PolyfaceBuilder.create(options);
+    const nearPoint = cameraPath.getPathPoint(cameraPath.advanceAlongPath(sliderValue, distanceValue));
+    const allPoints : Point3d [] = [];
+    allPoints.push(aCameraPoint.targetPoint);
+    allPoints.push(new Point3d(aCameraPoint.targetPoint.x, aCameraPoint.targetPoint.y, aCameraPoint.eyePoint.z));
+    allPoints.push(aCameraPoint.eyePoint);
+    allPoints.push(new Point3d(nearPoint.eyePoint.x, nearPoint.eyePoint.y, aCameraPoint.eyePoint.z));
+    allPoints.push(new Point3d(nearPoint.eyePoint.x, nearPoint.eyePoint.y, aCameraPoint.targetPoint.z));
+    
     builder.addCone(aCone);
+    // builder.addPolygon(allPoints, 5)
     const polyface = builder.claimPolyface(false);
     decorator.setColor(ColorDef.green);
     decorator.addGeometry(polyface)
     IModelApp.viewManager.addDecorator(decorator);
-    const checkRange = (aCone?.range());
+    // const checkRange = (aCone?.range());
+    const checkRange = createRange(aCameraPoint)
     console.log("Checking elements inside range ", checkRange)
     const candidates = await getSpatialElements(viewport.iModel, checkRange );
-    const classifiedElements = await getClassifiedElements(viewport, viewport.iModel, candidates, checkRange);
+    const classifiedElements = await getClassifiedElements(viewport, viewport.iModel, candidates, aCameraPoint);
     if (!classifiedElements) {
       console.log("no classified elements found")
       return;
@@ -353,7 +365,7 @@ useEffect(() => {
     cameraPath.setStaticTarget(XYZ);
   }
 
-  const getInitialView = async (vp: ScreenViewport) => {
+  const setInitialView = async (vp: ScreenViewport) => {
     // viewState.viewFlags.renderMode = RenderMode.SmoothShade;
     // viewport?.overrideDisplayStyle(viewState.getDisplayStyle3d())
     // why is W4 Geodetic
