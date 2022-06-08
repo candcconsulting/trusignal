@@ -6,7 +6,7 @@
 import "./App.scss";
 
 import { BrowserAuthorizationClient } from "@itwin/browser-authorization";
-import { IModelConnection, ScreenViewport, Viewport, ViewState } from "@itwin/core-frontend";
+import { IModelConnection,  ViewState } from "@itwin/core-frontend";
 import { FitViewTool, IModelApp, StandardViewId } from "@itwin/core-frontend";
 import { FillCentered } from "@itwin/core-react";
 import { Header, HeaderBreadcrumbs, HeaderButton, HeaderLogo, IconButton, MenuItem, ProgressLinear, UserIcon } from "@itwin/itwinui-react";
@@ -25,16 +25,17 @@ import { ThemeButton } from "./helper/ThemeButton";
 import { BentleyAPIFunctions } from "./helper/BentleyAPIFunctions";
 import { CameraPathWidgetProvider } from "./components/widgets/cameraPathWidget";
 import { initialiseapitokens, mapLayerOptions, tileAdminOptions } from "./api/maptokens";
-import { IModelViewportControlOptions, useActiveViewport } from "@itwin/appui-react";
+import { IModelViewportControlOptions, UiFramework, useActiveViewport } from "@itwin/appui-react";
 import { Id64 } from "@itwin/core-bentley";
 import ReactDOM from "react-dom";
 import { ViewportComponent } from "@itwin/imodel-components-react";
 
-const SimpleViewport = viewWithUnifiedSelection(ViewportComponent);
+/*
 const windowElement = document.createElement("div");
   windowElement.id = "portal";
   windowElement.style.width = "600px";
   windowElement.style.height = "400px";
+*/
 
 const App: React.FC = () => {
   const [iModelId, setIModelId] = useState(process.env.IMJS_IMODEL_ID);
@@ -136,7 +137,7 @@ const App: React.FC = () => {
     }
   },[selectedProject, authClient, handleIModelChange, iModelId])
 
-  useEffect(() => {
+  /*useEffect(() => {
     console.debug("Mount");
     const popup = window.open("","Viewport", "resizable,width=600,height=400,left=200,top=200");
     if (popup) {
@@ -151,7 +152,7 @@ const App: React.FC = () => {
     }
     return () => {};
   }, []);
-
+*/
 
 
   useEffect(() => {
@@ -211,6 +212,9 @@ useEffect(() => {
     IModelApp.quantityFormatter.setActiveUnitSystem("metric", true);
   }  
 }, [isOpen])
+
+
+
 
   const iModelConnected = useCallback ((iModel: IModelConnection) => {
     IModelApp.quantityFormatter.setActiveUnitSystem("metric", true);
@@ -341,15 +345,6 @@ useEffect(() => {
         tileAdminOptions = {tileAdminOptions}
       />
     </div>
-    {viewState && windowReady &&
-        ReactDOM.createPortal(
-          (<div style={{ height: "400px", width: "600px"}}><SimpleViewport
-            style={{ flexGrow: 1, height: "400px", width: "600px" }}
-            imodel={viewState!.iModel}
-            viewState={viewState}
-          /></div>),
-          windowElement,
-        )}
   </div>
   );
 };

@@ -4,7 +4,7 @@
 *--------------------------------------------------------------------------------------------*/
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AbstractWidgetProps, StagePanelLocation, StagePanelSection, UiItemsProvider, WidgetState } from "@itwin/appui-abstract";
-import { useActiveViewport } from "@itwin/appui-react";
+import { UiFramework, useActiveViewport } from "@itwin/appui-react";
 import { EmphasizeElements, IModelApp, rangeToCartographicArea, ScreenViewport } from "@itwin/core-frontend";
 import { SvgPause, SvgPlay } from "@itwin/itwinui-icons-react";
 import { Alert, Button, IconButton, LabeledInput, LabeledSelect, SelectOption, Slider, ToggleSwitch } from "@itwin/itwinui-react";
@@ -19,6 +19,10 @@ import { Cone, LineString3d, Point3d, PolyfaceBuilder, StrokeOptions } from "@it
 import { createRange, getClassifiedElements, getSpatialElements, SectionOfColoring } from "../../api/elementsApi";
 import { VolumeQueryApi } from "../../api/VolumeQueryApi";
 import { GeometryDecorator } from "../../utils/GeometryDecorator";
+import { viewWithUnifiedSelection } from "@itwin/presentation-components";
+import { ViewportComponent } from "@itwin/imodel-components-react";
+
+const SimpleViewport = viewWithUnifiedSelection(ViewportComponent);
 
 const defaultSkyBox: SkyBoxProps = { display: true, twoColor: false, groundColor: 9741199, nadirColor: 5464143, skyColor: 16764303, zenithColor: 16741686 };
 
@@ -70,6 +74,12 @@ const CameraPathWidget = () => {
 
 
   // private functions
+
+  const findFloatingViewPort = () => {
+    for (const viewPort of IModelApp.viewManager) {
+      console.log(viewPort)
+    }
+  }
 
   const _onSelectionChanged = (event: SelectionChangeEventArgs) => {
     selectedElements.current = new KeySet(event.keys);
@@ -132,15 +142,30 @@ const CameraPathWidget = () => {
       });
   }, [_handleScrollPath]);
 
+
+
   /** Turn the camera on, and initialize the tool */
   useEffect(() => {
     if (viewport) {
       setInitialView(viewport);
       CameraPathApi.prepareView(viewport);
-
+        // Create a child window.  Any elements we render in here will have access
+        //  the IModelApp and be in the same javascript scope
+        const secondWindow = UiFramework.childWindowManager.openChildWindow("popout-vp", "Viewport",
+        // Specify the Viewport to be rendered in the child window
+        (<SimpleViewport
+      
+            itemId  ="floatingViewPort"
+            imodel={viewport.iModel}            
+            />),
+            // Delare the size and location of child window
+            { height: 600, width: 400, left: 10, top: 50},
+            false,
+          );
       // We will use this method to activate the CameraPathTool
       // The CameraPathTool will prevent the view tool and standard mouse events
       setTimeout(() => { void IModelApp.tools.run(CameraPathTool.toolId, handleScrollAnimation, handleUnlockDirection); }, 10);
+      findFloatingViewPort();
     }
   }, [handleScrollAnimation, viewport]);
 
