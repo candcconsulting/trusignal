@@ -29,6 +29,7 @@ import { IModelViewportControlOptions, UiFramework, useActiveViewport } from "@i
 import { Id64 } from "@itwin/core-bentley";
 import ReactDOM from "react-dom";
 import { ViewportComponent } from "@itwin/imodel-components-react";
+import { url } from "inspector";
 
 /*
 const windowElement = document.createElement("div");
@@ -161,7 +162,12 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!iModelId) {    
-      setIModelId(process.env.IMJS_IMODEL_ID)
+      const urlParams = new URLSearchParams(window.location.search);
+      const urliModelId = urlParams.get("iModelId") as string;
+      if (urliModelId)
+        setIModelId(urliModelId)
+      else
+        setIModelId(process.env.IMJS_IMODEL_ID)
     }
   } , [iModelId])
 
@@ -179,8 +185,8 @@ const App: React.FC = () => {
         }
       }
       initialiseapitokens();
-      if (iModelId) {
-        /* setIModelId(urlParams.get("iModelId") as string); */
+      if (iModelId) {        
+        // setIModelId(urlParams.get("iModelId") as string); 
         BentleyAPIFunctions.getImodelData(authClient, iModelId).then(iModelData => {
           setSelectedIModel({id: iModelId, displayName: iModelData.displayName, name: iModelData.name})
         })        

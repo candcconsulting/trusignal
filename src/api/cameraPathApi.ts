@@ -50,6 +50,11 @@ export class CameraPath {
       // we need to handle a geometry handler
     } else {
       const vp = IModelApp.viewManager.getFirstOpenView();
+      const iModelName = vp?.iModel.name
+      if (!iModelName) {
+        // seems that timing means the model name could be blank
+        return
+      }
       let currentPathCoordinates: typeof E1 = [];
 
       switch (vp?.iModel.name) {
@@ -74,12 +79,31 @@ export class CameraPath {
         case "AL. TRU West - W3B - Coordination-Shared Model":
           currentPathCoordinates = W3B;
           break;
-        case "AM. TRU West - W4 - Coordination/Shared Model":
+        case "West of Leeds - W4 - Coordination/Shared":
           currentPathCoordinates = W4;
           break;
         default:
           console.log("Model not listed in switch :<" + vp?.iModel.name + ">")
-          currentPathCoordinates = E1;
+          switch (pathName) {
+            case "E1":
+              currentPathCoordinates = E1
+              break;
+            case  "W1A" : 
+              currentPathCoordinates = W1A
+              break;
+            case "W3A":
+              currentPathCoordinates = W3A
+              break;
+            case "W3B" :
+              currentPathCoordinates = W3B
+              break;
+            case "W4":
+              currentPathCoordinates = W4
+              break
+            default :
+              console.log("Path not listed in switch :<" + pathName + ">")
+              break;
+          }
           break;
       }
 

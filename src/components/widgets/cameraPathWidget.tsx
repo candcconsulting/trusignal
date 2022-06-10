@@ -49,7 +49,11 @@ const speeds: SelectOption<number>[] = [
 ];
 
 const paths: SelectOption<string>[] = [
-  { value: "flyoverPath", label: "Fly Over" }
+  { value: "E1", label: "E1" },
+  { value: "W1A", label: "W1A" },
+  { value: "W3A", label: "W3A"},
+  { value: "W3B", label: "W3B" },
+  { value: "W4", label: "W4" },
 ];
 
 interface SelectedElement extends Record<string, string> {
