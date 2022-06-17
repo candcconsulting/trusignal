@@ -40,8 +40,9 @@ const windowElement = document.createElement("div");
 
 const App: React.FC = () => {
   const [iModelId, setIModelId] = useState(process.env.IMJS_IMODEL_ID);
-  const [iModelName, setiModelName] = useState("...")
   const [iTwinId, setITwinId] = useState(process.env.IMJS_ITWIN_ID);
+  const [selectedIModel, setSelectedIModel] = useState({id: process.env.IMJS_ITWIN_ID, displayName: "iModel Display Name", name : "iModel Name"})
+  const [selectedProject, setSelectedProject] = useState({name: "Please select", description: "a project", id: ""});
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const accessToken = useAccessToken();
@@ -90,6 +91,53 @@ const App: React.FC = () => {
     setIsAuthorized(false);
   };
 
+  const handleIModelChange = useCallback(value => {
+    setIModelId(value as string)
+    if (authClient.isAuthorized) {
+      BentleyAPIFunctions.getImodelData(authClient, value).then(iModelData => {
+      setSelectedIModel({id: value, displayName: iModelData.iModel.displayName, name: iModelData.iModel.name})
+      })
+    }
+  }, [authClient]);
+
+  const projectIModels = useCallback((close: () => void) => {
+    var menuItemsToReturn : JSX.Element[] = [];
+    if (authClient.isAuthorized){
+    BentleyAPIFunctions.getImodelsMinimalFromProject(authClient, selectedProject.id).then(res => {
+      for (var x = 0; x < res.iModels.length; x++){
+          menuItemsToReturn.push(
+          <MenuItem
+          key={res.iModels[x].id}
+          title={res.iModels[x].displayName}
+          value={res.iModels[x].id} 
+          id={res.iModels[x].id}
+          onClick={(value: any) => {         
+              handleIModelChange(value);
+              close(); // close the dropdown menu
+          }}
+          isSelected={(res.iModels[x].id === iModelId) ? true : false}          
+          >
+          {res.iModels[x].id} -- {res.iModels[x].displayName}
+          </MenuItem>
+          )
+      }
+    })
+    .catch(error => {console.log("Caught an error", error.message); 
+        menuItemsToReturn.push(
+            <MenuItem
+            key="1" title={error.message}
+            onClick={(value) => {close()}}
+            >An error occurred - {error.message}</MenuItem>)
+            })
+    handleIModelChange(iModelId);
+    return (menuItemsToReturn);
+    }
+    else
+    {
+      return ([<MenuItem key="1">Please Login</MenuItem>])
+    }
+  },[selectedProject, authClient, handleIModelChange, iModelId])
+
   /*useEffect(() => {
     console.debug("Mount");
     const popup = window.open("","Viewport", "resizable,width=600,height=400,left=200,top=200");
@@ -128,7 +176,7 @@ const App: React.FC = () => {
       setIsAuthorized(true)
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.has("iTwinId")) {
-        // setITwinId(urlParams.get("iTwinId") as string);
+        setITwinId(urlParams.get("iTwinId") as string);
       } else {
         if (!process.env.IMJS_ITWIN_ID) {
           throw new Error(
@@ -138,7 +186,10 @@ const App: React.FC = () => {
       }
       initialiseapitokens();
       if (iModelId) {        
-        setIModelId(urlParams.get("iModelId") as string); 
+        // setIModelId(urlParams.get("iModelId") as string); 
+        BentleyAPIFunctions.getImodelData(authClient, iModelId).then(iModelData => {
+          setSelectedIModel({id: iModelId, displayName: iModelData.displayName, name: iModelData.name})
+        })        
       }        
       else {
         if (!process.env.IMJS_IMODEL_ID) {
@@ -153,22 +204,27 @@ const App: React.FC = () => {
   useEffect(() => {
     if (accessToken && iTwinId && iModelId) {
       history.push(`?iTwinId=${iTwinId}&iModelId=${iModelId}`);
+      BentleyAPIFunctions.getProjectData(authClient, iTwinId).then(projData => {
+        setSelectedProject({name: projData.projectNumber ,description: projData.displayName , id: projData.id});
+        })
+      BentleyAPIFunctions.getImodelData(authClient, iModelId).then(iModelData => {
+          setSelectedIModel({id: iModelId, displayName: iModelData.displayName, name: iModelData.name})          
+      })
     }
   }, [accessToken, iTwinId, iModelId, authClient]);
   
 useEffect(() => {
   if (isOpen) {
     IModelApp.quantityFormatter.setActiveUnitSystem("metric", true);
-  }
+  }  
 }, [isOpen])
 
 
 
 
-const iModelConnected = useCallback ((iModel: IModelConnection) => {
+  const iModelConnected = useCallback ((iModel: IModelConnection) => {
     IModelApp.quantityFormatter.setActiveUnitSystem("metric", true);
     setIsOpen(true);
-    setiModelName(iModel.name)
   }, [])
 
   const _oniModelReady = async (iModelConnection: IModelConnection) => {
@@ -177,7 +233,8 @@ const iModelConnected = useCallback ((iModel: IModelConnection) => {
     if (defaultViewId && Id64.isValidId64(defaultViewId)) {
       await setViewEffect(await iModelConnection?.views.load(defaultViewId))      
       setViewportOptions({ viewState });
-    };  
+    };
+  
   };
 
 
@@ -228,15 +285,35 @@ const iModelConnected = useCallback ((iModel: IModelConnection) => {
   const noProjectChange = useCallback((close: () => void) => {  
     return ([<MenuItem key="1">Project Change not enabled</MenuItem>])
   }, []) ;
-  const noiModelChange = useCallback((close: () => void) => {  
-    return ([<MenuItem key="1">Project Change not enabled</MenuItem>])
-  }, []) ;
-
 
   return (
     <div className="app">
     <Header
-    appLogo={<HeaderLogo logo={<SvgSettings />}>{`TRU Signal Verifier ${iModelName}`}</HeaderLogo>}
+    appLogo={<HeaderLogo logo={<SvgSettings />}>Model Checker</HeaderLogo>}
+     breadcrumbs={
+       <HeaderBreadcrumbs
+         items={[
+           <div>
+             <HeaderButton
+               className="scroll"
+               key="projectBreadcrumb"
+               menuItems={noProjectChange}
+               name={selectedProject.name}
+               description={selectedProject.description}
+               startIcon={<SvgNetwork />}
+             />
+             <HeaderButton
+             className="scroll"
+             key="iModelList"
+             menuItems={projectIModels}
+             name={selectedIModel.name}
+             description={selectedIModel.displayName}
+             startIcon={<SvgImodel />}
+           />
+           </div>
+         ]}
+       />
+     }
      actions={[<ThemeButton key="themeSwitched" />]}
      userIcon={
        <IconButton styleType="borderless"  onClick={() => {authClient.isAuthorized ? onLogoutClick() : onLoginClick()} }>

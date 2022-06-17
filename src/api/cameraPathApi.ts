@@ -2,7 +2,7 @@
 * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
-import { IModelApp, Viewport } from "@itwin/core-frontend";
+import { IModelApp, NotifyMessageDetails, OutputMessagePriority, Viewport } from "@itwin/core-frontend";
 import { CurveChainWithDistanceIndex, CurveLocationDetail, LineString3d, Path, Point3d, Vector3d  } from "@itwin/core-geometry";
 import { Point } from "@itwin/core-react";
 import { E1, W1A, W3A, W3B, W4 } from "../routes/coordinates";
@@ -102,6 +102,7 @@ export class CameraPath {
               break
             default :
               console.log("Path not listed in switch :<" + pathName + ">")
+              IModelApp.notifications.outputMessage(new NotifyMessageDetails(OutputMessagePriority.Warning, "Alignment not listed :<" + pathName + ">"));
               break;
           }
           break;

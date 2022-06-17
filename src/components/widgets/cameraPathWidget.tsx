@@ -42,9 +42,10 @@ const renderingStyleViewFlags: ViewFlagProps = {
 
 
 const speeds: SelectOption<number>[] = [
+  { value: 44.704, label: "100 Mph: Train" },
+  { value: 26.8224, label: "60 Mph: Car" },
   { value: 2.23520, label: "5 Mph: Walking" },
   { value: 13.4112, label: "30 Mph: Car" },
-  { value: 26.8224, label: "60 Mph: Car" },
   { value: 67.0500, label: "150 Mph: Airplane" },
 ];
 
@@ -153,6 +154,8 @@ const CameraPathWidget = () => {
     if (viewport) {
       setInitialView(viewport);
       CameraPathApi.prepareView(viewport);
+      setTimeout(() => { void IModelApp.tools.run(CameraPathTool.toolId, handleScrollAnimation, handleUnlockDirection); }, 10);
+      /*
         // Create a child window.  Any elements we render in here will have access
         //  the IModelApp and be in the same javascript scope
         const secondWindow = UiFramework.childWindowManager.openChildWindow("popout-vp", "Viewport",
@@ -168,8 +171,8 @@ const CameraPathWidget = () => {
           );
       // We will use this method to activate the CameraPathTool
       // The CameraPathTool will prevent the view tool and standard mouse events
-      setTimeout(() => { void IModelApp.tools.run(CameraPathTool.toolId, handleScrollAnimation, handleUnlockDirection); }, 10);
       findFloatingViewPort();
+      */
     }
   }, [handleScrollAnimation, viewport]);
 
