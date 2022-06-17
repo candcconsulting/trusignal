@@ -316,7 +316,7 @@ useEffect(() => {
         zoomFactor = 1 / (distanceValue / 10);
       else
         zoomFactor = parseFloat(zoom.value);
-      const returnZoomValue = viewPort.zoom(undefined,zoomFactor);
+      const returnZoomValue = viewPort.zoom(undefined,zoomFactor, { animateFrustumChange: false });
       await BeDuration.wait(100);
       await waitForSceneCompletion(viewPort);
       console.log("Zoom Factor " + zoomFactor + " returned : " + returnZoomValue);
