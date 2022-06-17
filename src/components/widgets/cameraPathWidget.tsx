@@ -5,7 +5,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AbstractWidgetProps, StagePanelLocation, StagePanelSection, UiItemsProvider, WidgetState } from "@itwin/appui-abstract";
 import { UiFramework, useActiveViewport } from "@itwin/appui-react";
-import { EmphasizeElements, IModelApp, rangeToCartographicArea, ScreenViewport } from "@itwin/core-frontend";
+import { EmphasizeElements, IModelApp, rangeToCartographicArea, ScreenViewport, Viewport } from "@itwin/core-frontend";
 import { SvgPause, SvgPlay } from "@itwin/itwinui-icons-react";
 import { Alert, Button, IconButton, LabeledInput, LabeledSelect, SelectOption, Slider, ToggleSwitch } from "@itwin/itwinui-react";
 import CameraPathApi, { CameraPath } from "../../api/cameraPathApi";
@@ -13,7 +13,7 @@ import { CameraPathTool } from "../tools/cameraPathTool";
 import "./cameraPath.scss";
 import { KeySet } from "@itwin/presentation-common";
 import { Presentation, SelectionChangeEventArgs } from "@itwin/presentation-frontend";
-import { Id64String } from "@itwin/core-bentley";
+import { BeDuration, Id64String } from "@itwin/core-bentley";
 import { BackgroundMapType, ColorDef, DisplayStyle3dSettingsProps, FeatureAppearance, GeometricElement3dProps, GeometryStreamIterator, Placement3d, RenderMode, SkyBoxProps, TerrainHeightOriginMode, ViewFlagProps } from "@itwin/core-common";
 import { Cone, LineString3d, Point3d, PolyfaceBuilder, StrokeOptions } from "@itwin/core-geometry";
 import { createRange, getClassifiedElements, getSpatialElements, SectionOfColoring } from "../../api/elementsApi";
@@ -296,7 +296,31 @@ useEffect(() => {
       })
     }
   }
-
+  async function waitForSceneCompletion(viewport: Viewport): Promise<void> {
+    if (viewport.areAllTileTreesLoaded && viewport.numRequestedTiles === 0)
+      return;
+  
+    await BeDuration.wait(100);
+    return waitForSceneCompletion(viewport);
+  }
+  const takeSnapshot = async () => {
+    const viewPort = IModelApp.viewManager.getFirstOpenView();
+    if (viewPort !== undefined) {
+      const clonedView = viewPort.view.clone();
+      const zoom = document.getElementById('zoom') as HTMLInputElement;
+      const returnZoomValue = await viewPort.zoom(undefined,parseFloat(zoom.value))
+      await waitForSceneCompletion(viewPort);
+      console.log("Zoom Factor " + parseFloat(zoom.value) + " returned : " + returnZoomValue)
+      const canvas = viewPort.readImageToCanvas();
+      const imageUrl = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      const fileName = "zoom" + zoom.value + ".png"
+      link.setAttribute("download", fileName);
+      link.setAttribute("href", imageUrl);
+      link.click();
+      viewPort.changeView(clonedView)
+    }
+  }
 
 
   const captureTarget = async () => {
@@ -461,6 +485,9 @@ useEffect(() => {
         <Button onClick={setTarget}>Set XYZ</Button>
         <Button onClick={clearTarget} >Clear Target</Button>
         <Button onClick={validateTarget} >Validate Target</Button>
+        <Button onClick={takeSnapshot} >Take Snapshot</Button>
+        <LabeledInput displayStyle = "inline" label = "Zoom" id = "zoom" width = "10"></LabeledInput>
+
         <ToggleSwitch label="Show Volume Box" checked={volumeBoxState} onChange={() => setVolumeBoxState((state) => !state)}  />
 
 
