@@ -308,17 +308,26 @@ useEffect(() => {
     if (viewPort !== undefined) {
       const clonedView = viewPort.view.clone();
       const zoom = document.getElementById('zoom') as HTMLInputElement;
-      const returnZoomValue = await viewPort.zoom(undefined,parseFloat(zoom.value))
+      const x = document.getElementById('xPoint') as HTMLInputElement;
+      const y = document.getElementById('yPoint') as HTMLInputElement;
+      const z = document.getElementById('zPoint') as HTMLInputElement;
+      let zoomFactor = 0.1;
+      if (Number.isNaN(parseFloat(zoom.value)))
+        zoomFactor = 1 / (distanceValue / 10);
+      else
+        zoomFactor = parseFloat(zoom.value);
+      const returnZoomValue = viewPort.zoom(undefined,zoomFactor);
+      await BeDuration.wait(100);
       await waitForSceneCompletion(viewPort);
-      console.log("Zoom Factor " + parseFloat(zoom.value) + " returned : " + returnZoomValue)
+      console.log("Zoom Factor " + zoomFactor + " returned : " + returnZoomValue);
       const canvas = viewPort.readImageToCanvas();
       const imageUrl = canvas.toDataURL("image/png");
       const link = document.createElement("a");
-      const fileName = "zoom" + zoom.value + ".png"
+      const fileName = "Targetx"+x.value+"y"+y.value+"z"+z.value+"Distance"+distanceValue +".png";
       link.setAttribute("download", fileName);
       link.setAttribute("href", imageUrl);
       link.click();
-      viewPort.changeView(clonedView)
+      viewPort.changeView(clonedView);
     }
   }
 
