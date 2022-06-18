@@ -5,7 +5,7 @@
 
 import { BentleyStatus, Id64Array } from "@itwin/core-bentley";
 import { ColorDef, FeatureAppearance, GeometryContainmentRequestProps } from "@itwin/core-common";
-import { EmphasizeElements, IModelApp, IModelConnection, ScreenViewport, StandardViewId, ViewClipClearTool, ViewClipDecorationProvider, ViewClipTool, ViewState } from "@itwin/core-frontend";
+import { EmphasizeElements, IModelApp, IModelConnection, ScreenViewport, ViewClipClearTool, ViewClipDecorationProvider, ViewClipTool} from "@itwin/core-frontend";
 import { ClipMaskXYZRangePlanes, ClipPlaneContainment, ClipShape, ClipUtilities, ClipVector, Range3d } from "@itwin/core-geometry";
 import { InstanceKey } from "@itwin/presentation-common";
 import { PresentationLabelsProvider } from "@itwin/presentation-components";

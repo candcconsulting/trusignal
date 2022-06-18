@@ -4,7 +4,6 @@
 *--------------------------------------------------------------------------------------------*/
 import { IModelApp, NotifyMessageDetails, OutputMessagePriority, Viewport } from "@itwin/core-frontend";
 import { CurveChainWithDistanceIndex, CurveLocationDetail, LineString3d, Path, Point3d, Vector3d  } from "@itwin/core-geometry";
-import { Point } from "@itwin/core-react";
 import { E1, W1A, W3A, W3B, W4 } from "../routes/coordinates";
 
 export interface CameraPathPoint {
@@ -192,7 +191,7 @@ export class CameraPath {
   public distanceToTarget(fraction: number) : number {
     if (!this._path) {
       throw new Error("Path was not loaded");
-      return 0}
+    }
 
     const eyePoint = this._path.fractionToPoint(fraction);
     const targetFraction = this._path.moveSignedDistanceFromFraction(fraction, 10, false).fraction;        
@@ -228,14 +227,14 @@ export class CameraPath {
 
     const lineString = detail.childDetail.curve as LineString3d;
     const numPoints = lineString.packedPoints.length;
-    const { segmentIndex, segmentFraction } = this._getSegmentIndexAndLocalFraction(detail, numPoints);
+    const { segmentIndex } = this._getSegmentIndexAndLocalFraction(detail, numPoints);
 
     // If we are standing on the last point, just return the last point
     if (numPoints - 1 === segmentIndex)
       return new Point3d(this._targetPoints[segmentIndex].x, this._targetPoints[segmentIndex].y, this._targetPoints[segmentIndex].z);
 
     // We are in between two points of the path, interpolate between the two points
-    const prevTargetPoint = this._targetPoints[segmentIndex];
+    // const prevTargetPoint = this._targetPoints[segmentIndex];
     const nextTargetPoint = this._targetPoints[segmentIndex + 1];
     return nextTargetPoint;
     /* return prevTargetPoint.interpolate(segmentFraction, nextTargetPoint); */

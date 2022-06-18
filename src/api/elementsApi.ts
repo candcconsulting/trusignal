@@ -1,7 +1,7 @@
 import { BentleyStatus, Id64Array } from "@itwin/core-bentley";
 import { GeometryContainmentRequestProps } from "@itwin/core-common";
-import { IModelConnection, ScreenViewport, ViewClipTool } from "@itwin/core-frontend";
-import { ClipMaskXYZRangePlanes, ClipPlaneContainment, ClipShape, ClipVector, Matrix3d, Point3d, Range3d, Transform, Vector3d } from "@itwin/core-geometry";
+import { IModelConnection, ScreenViewport } from "@itwin/core-frontend";
+import {  ClipPlaneContainment, ClipVector, Matrix3d, Point3d, Range3d, Transform, Vector3d } from "@itwin/core-geometry";
 import { InstanceKey } from "@itwin/presentation-common";
 import { CameraPathPoint } from "./cameraPathApi";
 

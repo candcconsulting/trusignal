@@ -7,29 +7,23 @@ import "./App.scss";
 
 import { BrowserAuthorizationClient } from "@itwin/browser-authorization";
 import { IModelConnection,  ViewState } from "@itwin/core-frontend";
-import { FitViewTool, IModelApp, StandardViewId } from "@itwin/core-frontend";
+import { IModelApp, } from "@itwin/core-frontend";
 import { FillCentered } from "@itwin/core-react";
-import { Header, HeaderBreadcrumbs, HeaderButton, HeaderLogo, IconButton, MenuItem, ProgressLinear, UserIcon } from "@itwin/itwinui-react";
-import { SvgImodel, SvgNetwork,  SvgSettings } from "@itwin/itwinui-icons-react";
-import {viewWithUnifiedSelection} from "@itwin/presentation-components"
+import { Header, HeaderLogo, IconButton, ProgressLinear, UserIcon } from "@itwin/itwinui-react";
+import { SvgSettings } from "@itwin/itwinui-icons-react";
 
 import {
   useAccessToken,
   Viewer,
-  ViewerPerformance,
 } from "@itwin/web-viewer-react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import { history } from "./history";
 import { ThemeButton } from "./helper/ThemeButton";
-import { BentleyAPIFunctions } from "./helper/BentleyAPIFunctions";
 import { CameraPathWidgetProvider } from "./components/widgets/cameraPathWidget";
 import { initialiseapitokens, mapLayerOptions, tileAdminOptions } from "./api/maptokens";
-import { IModelViewportControlOptions, UiFramework, useActiveViewport } from "@itwin/appui-react";
+import { IModelViewportControlOptions } from "@itwin/appui-react";
 import { Id64 } from "@itwin/core-bentley";
-import ReactDOM from "react-dom";
-import { ViewportComponent } from "@itwin/imodel-components-react";
-import { url } from "inspector";
 
 /*
 const windowElement = document.createElement("div");
@@ -47,7 +41,7 @@ const App: React.FC = () => {
   const accessToken = useAccessToken();
   const [viewportOptions, setViewportOptions] = useState<IModelViewportControlOptions>();
   const [viewState, setViewEffect] = useState<ViewState | undefined>();
-  const [windowReady, setPopup] = useState<boolean>(false);
+
 
 
   const authClient = useMemo(
@@ -225,13 +219,6 @@ const iModelConnected = useCallback ((iModel: IModelConnection) => {
     [viewConfiguration]
   );
 */
-  const noProjectChange = useCallback((close: () => void) => {  
-    return ([<MenuItem key="1">Project Change not enabled</MenuItem>])
-  }, []) ;
-  const noiModelChange = useCallback((close: () => void) => {  
-    return ([<MenuItem key="1">Project Change not enabled</MenuItem>])
-  }, []) ;
-
 
   return (
     <div className="app">
@@ -268,7 +255,7 @@ const iModelConnected = useCallback ((iModel: IModelConnection) => {
         authClient={authClient}
         //viewCreatorOptions={viewCreatorOptions}
         enablePerformanceMonitors={true} // see description in the README (https://www.npmjs.com/package/@itwin/desktop-viewer-react)
-        uiProviders={[ new CameraPathWidgetProvider]}
+        uiProviders={[ new CameraPathWidgetProvider()]}
         onIModelConnected = {iModelConnected}
         mapLayerOptions = {mapLayerOptions}
         tileAdminOptions = {tileAdminOptions}

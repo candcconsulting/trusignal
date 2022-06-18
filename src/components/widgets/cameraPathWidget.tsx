@@ -4,8 +4,8 @@
 *--------------------------------------------------------------------------------------------*/
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AbstractWidgetProps, StagePanelLocation, StagePanelSection, UiItemsProvider, WidgetState } from "@itwin/appui-abstract";
-import { UiFramework, useActiveViewport } from "@itwin/appui-react";
-import { EmphasizeElements, IModelApp, rangeToCartographicArea, ScreenViewport, Viewport } from "@itwin/core-frontend";
+import { useActiveViewport } from "@itwin/appui-react";
+import { EmphasizeElements, IModelApp, ScreenViewport, Viewport } from "@itwin/core-frontend";
 import { SvgPause, SvgPlay } from "@itwin/itwinui-icons-react";
 import { Alert, Button, IconButton, LabeledInput, LabeledSelect, SelectOption, Slider, ToggleSwitch } from "@itwin/itwinui-react";
 import CameraPathApi, { CameraPath } from "../../api/cameraPathApi";
@@ -19,10 +19,10 @@ import { Cone, LineString3d, Point3d, PolyfaceBuilder, StrokeOptions } from "@it
 import { createRange, getClassifiedElements, getSpatialElements, SectionOfColoring } from "../../api/elementsApi";
 import { VolumeQueryApi } from "../../api/VolumeQueryApi";
 import { GeometryDecorator } from "../../utils/GeometryDecorator";
-import { viewWithUnifiedSelection } from "@itwin/presentation-components";
-import { ViewportComponent } from "@itwin/imodel-components-react";
+//import { viewWithUnifiedSelection } from "@itwin/presentation-components";
+//import { ViewportComponent } from "@itwin/imodel-components-react";
 
-const SimpleViewport = viewWithUnifiedSelection(ViewportComponent);
+// const SimpleViewport = viewWithUnifiedSelection(ViewportComponent);
 
 const defaultSkyBox: SkyBoxProps = { display: true, twoColor: false, groundColor: 9741199, nadirColor: 5464143, skyColor: 16764303, zenithColor: 16741686 };
 
@@ -74,17 +74,10 @@ const CameraPathWidget = () => {
   const [capturedPathElements, setCapturedPathElements] = useState<SelectedElement[]>([]);
   const [capturedTargetElements, setCapturedTargetElements] = useState<SelectedElement[]>([]);
   const [volumeBoxState, setVolumeBoxState] = React.useState<boolean>(true);
-  const iModelConnection = viewport?.iModel
   const [decoratorState, setDecoratorState] = React.useState<GeometryDecorator>();
 
 
   // private functions
-
-  const findFloatingViewPort = () => {
-    for (const viewPort of IModelApp.viewManager) {
-      console.log(viewPort)
-    }
-  }
 
   const _onSelectionChanged = (event: SelectionChangeEventArgs) => {
     selectedElements.current = new KeySet(event.keys);
