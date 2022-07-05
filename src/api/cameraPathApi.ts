@@ -207,13 +207,22 @@ export class CameraPath {
   }
 
   public xOffset(n: number) {
-    this._xOffset = n
+    if (isNaN(n)) 
+      this._xOffset = 0    
+    else
+      this._xOffset = n
   }
   public yOffset(n: number) {
-    this._yOffset = n
+    if (isNaN(n)) 
+      this._yOffset = 0
+    else
+      this._yOffset = n
   }
   public zOffset(n: number) {
-    this._zOffset = n
+    if (isNaN(n)) 
+      this._zOffset = 0
+    else
+      this._zOffset = n
   }
 
   private _getTargetPoint(point: Point3d) {
