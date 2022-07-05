@@ -419,8 +419,12 @@ useEffect(() => {
     const xPoint = document.getElementById('xPoint') as HTMLInputElement;
     const yPoint = document.getElementById('yPoint') as HTMLInputElement;
     const zPoint = document.getElementById('zPoint') as HTMLInputElement;
-    const XYZ = new Point3d(parseFloat(xPoint.value), parseFloat(yPoint.value), parseFloat(zPoint.value));
-    cameraPath.setStaticTarget(XYZ);
+    if (isNaN(parseFloat(xPoint.value)) || isNaN(parseFloat(yPoint.value)) || isNaN(parseFloat(zPoint.value)))
+      alert("Invalid X,Y,Z values")
+    else {
+      const XYZ = new Point3d(parseFloat(xPoint.value), parseFloat(yPoint.value), parseFloat(zPoint.value));
+      cameraPath.setStaticTarget(XYZ);
+    }
   }
 
   const setInitialView = async (vp: ScreenViewport) => {
