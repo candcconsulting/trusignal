@@ -49,7 +49,8 @@ const App: React.FC = () => {
       new BrowserAuthorizationClient({
         scope: process.env.IMJS_AUTH_CLIENT_SCOPES ?? "",
         clientId: process.env.IMJS_AUTH_CLIENT_CLIENT_ID ?? "",
-        redirectUri: process.env.IMJS_AUTH_CLIENT_REDIRECT_URI ?? "",
+        // redirectUri: process.env.IMJS_AUTH_CLIENT_REDIRECT_URI ?? window.location.origin + "/signin-callback",
+        redirectUri: window.location.origin + "/signin-callback",
         postSignoutRedirectUri: process.env.IMJS_AUTH_CLIENT_LOGOUT_URI,
         responseType: "code",
         authority: process.env.IMJS_AUTH_AUTHORITY,
@@ -223,7 +224,7 @@ const iModelConnected = useCallback ((iModel: IModelConnection) => {
   return (
     <div className="app">
     <Header
-    appLogo={<HeaderLogo logo={<SvgSettings />}>{`TRU Signal Verifier ${iModelName}`}</HeaderLogo>}
+    appLogo={<HeaderLogo logo={<SvgSettings />}>{`Signal Verifier ${iModelName}`}</HeaderLogo>}
      actions={[<ThemeButton key="themeSwitched" />]}
      userIcon={
        <IconButton styleType="borderless"  onClick={() => {authClient.isAuthorized ? onLogoutClick() : onLoginClick()} }>

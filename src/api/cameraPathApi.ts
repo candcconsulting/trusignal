@@ -2,9 +2,12 @@
 * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
+import { Id64String } from "@itwin/core-bentley";
+import { GeometryStreamIterator } from "@itwin/core-common";
 import { IModelApp, NotifyMessageDetails, OutputMessagePriority, Viewport } from "@itwin/core-frontend";
 import { CurveChainWithDistanceIndex, CurveLocationDetail, LineString3d, Path, Point3d, Vector3d  } from "@itwin/core-geometry";
 import { E1, W1A, W3A, W3B, W4 } from "../routes/coordinates";
+import { K1 } from "../routes/kiwicoordinates";
 
 export interface CameraPathPoint {
   eyePoint: Point3d;
@@ -81,6 +84,9 @@ export class CameraPath {
         case "West of Leeds - W4 - Coordination/Shared":
           currentPathCoordinates = W4;
           break;
+        case "KiwiRail-Johnsonville Track":          
+          currentPathCoordinates = K1
+          break;
         default:
           console.log("Model not listed in switch :<" + vp?.iModel.name + ">")
           switch (pathName) {
@@ -99,7 +105,10 @@ export class CameraPath {
             case "W4":
               currentPathCoordinates = W4
               break
-            default :
+              case "K1":
+                currentPathCoordinates = K1
+                break;
+              default :
               console.log("Path not listed in switch :<" + pathName + ">")
               IModelApp.notifications.outputMessage(new NotifyMessageDetails(OutputMessagePriority.Warning, "Alignment not listed :<" + pathName + ">"));
               break;

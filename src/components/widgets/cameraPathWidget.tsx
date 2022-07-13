@@ -55,6 +55,7 @@ const paths: SelectOption<string>[] = [
   { value: "W3A", label: "W3A"},
   { value: "W3B", label: "W3B" },
   { value: "W4", label: "W4" },
+  { value: "K1", label: "K1" },
 ];
 
 interface SelectedElement extends Record<string, string> {
