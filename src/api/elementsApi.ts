@@ -22,7 +22,10 @@ export enum ElementPosition {
 
 /* Getting elements that are inside or overlapping the given range*/
   export async function getSpatialElements(conn: IModelConnection, range: Range3d): Promise<SpatialElement[]> {
-    const query = `SELECT e.ECInstanceId,  ec_classname(e.ECClassId, 's:c')  FROM bis.SpatialElement e JOIN bis.SpatialIndex i ON e.ECInstanceId=i.ECInstanceId WHERE i.MinX<=${range.xHigh} AND i.MinY<=${range.yHigh} AND i.MinZ<=${range.zHigh} AND i.MaxX >= ${range.xLow} AND i.MaxY >= ${range.yLow} AND i.MaxZ >= ${range.zLow}`;
+    // const query = `SELECT e.ECInstanceId,  ec_classname(e.ECClassId, 's:c')  FROM bis.SpatialElement e JOIN bis.SpatialIndex i ON e.ECInstanceId=i.ECInstanceId WHERE i.MinX<=${range.xHigh} AND i.MinY<=${range.yHigh} AND i.MinZ<=${range.zHigh} AND i.MaxX >= ${range.xLow} AND i.MaxY >= ${range.yLow} AND i.MaxZ >= ${range.zLow}`;
+    // the above is meant to make the "clash" more efficient ... but the reality is that this omits elements with no bounding box (more common than it should be)
+    // whereas the below query will not have that issue, but is still "Performant"
+    const query = `SELECT e.ECInstanceId,  ec_classname(e.ECClassId, 's:c')  FROM bis.SpatialElement e `;
     const elementsAsync = conn.query(query);
     const elements: SpatialElement[] = [];
     for await (const element of elementsAsync) {

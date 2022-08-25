@@ -6,6 +6,7 @@ import { Id64String } from "@itwin/core-bentley";
 import { GeometryStreamIterator } from "@itwin/core-common";
 import { IModelApp, NotifyMessageDetails, OutputMessagePriority, Viewport } from "@itwin/core-frontend";
 import { CurveChainWithDistanceIndex, CurveLocationDetail, LineString3d, Path, Point3d, Vector3d  } from "@itwin/core-geometry";
+import path from "path";
 import { E1, W1A, W3A, W3B, W4 } from "../routes/coordinates";
 import { K1 } from "../routes/kiwicoordinates";
 
@@ -44,6 +45,7 @@ export class CameraPath {
   private _xOffset = 0;
   private _yOffset = 0;
   private _zOffset = 0;
+  private _reversePath = false;
 
   
   constructor(public pathName: string) {
@@ -116,7 +118,9 @@ export class CameraPath {
           break;
       }
 
-    
+      if (this._reversePath) {
+        currentPathCoordinates = currentPathCoordinates.reverse()
+      }
       const targetPoints: Point3d[] = [];
       const directions: Point3d[] = [];
       let i = 0;
@@ -145,11 +149,25 @@ export class CameraPath {
   public distanceXYZXYZ (x1 : number, y1 : number, z1 : number, x2 : number, y2 : number, z2 : number) {
     return Math.sqrt(Math.pow(x2 - x1,2) + Math.pow(y2 - y1,2) + Math.pow(z2 - z1,2))
   }
+  public setReversePath(reversePath : boolean) {
+    this._reversePath = reversePath;
+    this._path?.reverseInPlace();
+  }
 
   public setPathFromLine(line: LineString3d) {
-    const path = CurveChainWithDistanceIndex.createCapture(Path.create(line));
+    
+    const path = CurveChainWithDistanceIndex.createCapture(Path.create(line));    
+    
     if (path !== undefined) {
-      this._path = path;      
+      if (this._reversePath) 
+      {
+        path.reverseInPlace()
+        this._path = path;
+      }
+      else
+      {
+        this._path = path;
+      }
     }
   }
 

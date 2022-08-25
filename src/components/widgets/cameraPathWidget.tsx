@@ -76,6 +76,7 @@ const CameraPathWidget = () => {
   const [capturedTargetElements, setCapturedTargetElements] = useState<SelectedElement[]>([]);
   const [volumeBoxState, setVolumeBoxState] = React.useState<boolean>(true);
   const [decoratorState, setDecoratorState] = React.useState<GeometryDecorator>();
+  const [reversePath, setReversePath] = React.useState<boolean>(false);
 
 
   // private functions
@@ -209,7 +210,9 @@ useEffect(() => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cameraPath, speed, isPaused, viewport]);
 
-
+  useEffect (() => {
+    cameraPath.setReversePath(reversePath);
+  }, [cameraPath,reversePath])
   useEffect(() => {
     // Subscribe for unified selection changes
     // Change the default selection scope. Top-assembly scope returns key of selected element's topmost parent element (or just the element if it has no parents)
@@ -496,6 +499,7 @@ useEffect(() => {
         <LabeledInput displayStyle = "inline" label = "Zoom" id = "zoom" width = "10"></LabeledInput>
 
         <ToggleSwitch label="Show Volume Box" checked={volumeBoxState} onChange={() => setVolumeBoxState((state) => !state)}  />
+        <ToggleSwitch label="Reverse Path" checked={reversePath} onChange={() => setReversePath((state) => !state)}  />
 
 
       </div>
