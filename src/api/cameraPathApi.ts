@@ -8,6 +8,7 @@ import { IModelApp, NotifyMessageDetails, OutputMessagePriority, Viewport } from
 import { CurveChainWithDistanceIndex, CurveLocationDetail, LineString3d, Path, Point3d, Vector3d  } from "@itwin/core-geometry";
 import path from "path";
 import { E1, W1A, W3A, W3B, W4 } from "../routes/coordinates";
+import { E2, E3, E4 } from "../routes/E2E3E4";
 import { K1 } from "../routes/kiwicoordinates";
 
 export interface CameraPathPoint {
@@ -89,11 +90,23 @@ export class CameraPath {
         case "KiwiRail-Johnsonville Track":          
           currentPathCoordinates = K1
           break;
+        case "AC. TRU East E2 - Coordinated/Shared Model":
+          currentPathCoordinates = E2;
+          break;
         default:
           console.log("Model not listed in switch :<" + vp?.iModel.name + ">")
           switch (pathName) {
             case "E1":
               currentPathCoordinates = E1
+              break;
+            case "E2":
+              currentPathCoordinates = E2
+              break;
+            case "E3":
+              currentPathCoordinates = E3
+              break;
+            case "E4":
+              currentPathCoordinates = E4
               break;
             case  "W1A" : 
               currentPathCoordinates = W1A
