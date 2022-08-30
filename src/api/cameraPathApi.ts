@@ -93,6 +93,9 @@ export class CameraPath {
         case "AC. TRU East E2 - Coordinated/Shared Model":
           currentPathCoordinates = E2;
           break;
+        case "E234 Signal Sighting Mono":
+          currentPathCoordinates = E2;
+          break;
         default:
           console.log("Model not listed in switch :<" + vp?.iModel.name + ">")
           switch (pathName) {
