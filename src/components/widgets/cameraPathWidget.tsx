@@ -24,6 +24,7 @@ import { GeometryDecorator } from "../../utils/GeometryDecorator";
 
 // const SimpleViewport = viewWithUnifiedSelection(ViewportComponent);
 
+
 const defaultSkyBox: SkyBoxProps = { display: true, twoColor: false, groundColor: 9741199, nadirColor: 5464143, skyColor: 16764303, zenithColor: 16741686 };
 
 const renderingStyleViewFlags: ViewFlagProps = {
@@ -84,6 +85,9 @@ const CameraPathWidget = () => {
 
   // private functions
 
+  function delay(ms: number) {
+    return new Promise( resolve => setTimeout(resolve, ms) );
+}
   const _onSelectionChanged = (event: SelectionChangeEventArgs) => {
     selectedElements.current = new KeySet(event.keys);
     setElementsAreSelected(!event.keys.isEmpty);
@@ -242,37 +246,50 @@ useEffect(() => {
   const capturePath = async () => {
     let elements: SelectedElement[] = [];
     const iModel = viewport?.iModel
-    selectedElements.current.instanceKeys.forEach((values, key) => {
-      const classElements = Array.from(values)
-        .filter((value) => capturedPathElements.find((e) => e.elementId === value) === undefined)
-        .map((value) => ({ elementId: value, className: key }));
-      elements = elements.concat(classElements);
-    });
-        setCapturedPathElements(capturedPathElements.concat(elements));
-    if (iModel) {
-      const element = elements[0].elementId as Id64String;
-      const geoElement = await iModel.elements.loadProps(element, {wantGeometry : true});
-      if (geoElement) {
-        const temp: any = geoElement;
-        try {
-          const geoStream = GeometryStreamIterator.fromGeometricElement3d(temp);
-          for (const entry of geoStream) {
-            if ('geometryQuery' === entry.primitive.type) {
-              const geometry = entry.primitive.geometry;                
-                        // In here you can deal with the curve
-                        // There’s no reason to deal with individual points.
-                        // The cameraPath sample code just takes the input points and builds a curve anyway.
-              cameraPath.setPathFromLine(geometry as LineString3d)        
+    let elementsSet = 0
+    while (elements.length === 0 && elementsSet < 3) {
+      // eslint-disable-next-line no-loop-func
+      selectedElements.current.instanceKeys.forEach((values, key) => {
+        const classElements = Array.from(values)
+          .filter((value) => capturedPathElements.find((e) => e.elementId === value) === undefined)
+          .map((value) => ({ elementId: value, className: key }));
+        elements = elements.concat(classElements);
+      });
+      if (elements.length === 0)
+        ++elementsSet;
+        await delay(1000);
+    }
+    if (elements.length === 0) {
+      alert("Element could not be set from elements, please unpick and try again")
+    } else
+    {
+    
+      setCapturedPathElements(capturedPathElements.concat(elements));
+      if (iModel) {
+        const element = elements[0].elementId as Id64String;
+        const geoElement = await iModel.elements.loadProps(element, {wantGeometry : true});
+        if (geoElement) {
+          const temp: any = geoElement;
+          try {
+            const geoStream = GeometryStreamIterator.fromGeometricElement3d(temp);
+            for (const entry of geoStream) {
+              if ('geometryQuery' === entry.primitive.type) {
+                const geometry = entry.primitive.geometry;                
+                          // In here you can deal with the curve
+                          // There’s no reason to deal with individual points.
+                          // The cameraPath sample code just takes the input points and builds a curve anyway.
+                cameraPath.setPathFromLine(geometry as LineString3d)        
+              }
             }
           }
+          catch (error) {
+            const err = error as Error;
+            console.log(err.message)
+          }
         }
-        catch (error) {
-          const err = error as Error;
-          console.log(err.message)
-        }
-      }
-    };
-    setSliderValue(0);
+      };
+      setSliderValue(0);
+    }
   }
   const showProps = async () => {
     const iModel = viewport?.iModel
@@ -296,6 +313,7 @@ useEffect(() => {
       })
     }
   }
+
   async function waitForSceneCompletion(viewport: Viewport): Promise<void> {
     if (viewport.areAllTileTreesLoaded && viewport.numRequestedTiles === 0)
       return;
