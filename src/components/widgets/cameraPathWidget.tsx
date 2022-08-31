@@ -68,7 +68,7 @@ interface SelectedElement extends Record<string, string> {
 }
 
 const CameraPathWidget = () => {
-  const viewport = useActiveViewport();
+  const viewport = useActiveViewport();  
   const [cameraPath, setCameraPath] = useState<CameraPath>(new CameraPath(paths[0].value));
   const [isPaused, setIsPaused] = useState<boolean>(true);
   const [sliderValue, setSliderValue] = useState<number>(0);
@@ -377,7 +377,16 @@ useEffect(() => {
 
   const clearTarget = () => {
     cameraPath.clearTarget();
-    setSliderValue(0);
+    setSliderValue(0);   
+    if (decoratorState)
+      IModelApp.viewManager.dropDecorator(decoratorState);
+    if (viewport) {
+      const provider = EmphasizeElements.getOrCreate(viewport);
+      provider.clearEmphasizedElements(viewport);
+      provider.clearHiddenElements(viewport);
+      provider.clearIsolatedElements(viewport);
+      provider.clearOverriddenElements(viewport);
+    }
   }
 
   const validateTarget = async () => {
@@ -423,7 +432,6 @@ useEffect(() => {
     const polyface = builder.claimPolyface(false);
     decorator.setColor(ColorDef.green);
     decorator.addGeometry(polyface)
-    IModelApp.viewManager.addDecorator(decorator);
     // const checkRange = (aCone?.range());
     const checkRange = createRange(aCameraPoint)
     console.log("Checking elements inside range ", checkRange)
