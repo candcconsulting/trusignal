@@ -52,9 +52,12 @@ const speeds: SelectOption<number>[] = [
 
 const paths: SelectOption<string>[] = [
   { value: "E1", label: "E1" },
-  { value: "E2", label: "E2" },
-  { value: "E3", label: "E3" },
-  { value: "E4", label: "E4" },
+  { value: "E2DownHull", label: "E2DownHull"},
+  { value: "E2UpHull", label: "E2UpHull"},
+  { value: "E3DownHull", label: "E3DownHull"},
+  { value: "E3UpHull", label: "E3UpHull"},
+  { value: "E4DownHull", label: "E4DownHull"},
+  { value: "E4UpHull", label: "E4UpHull"},
   { value: "W1A", label: "W1A" },
   { value: "W3A", label: "W3A"},
   { value: "W3B", label: "W3B" },

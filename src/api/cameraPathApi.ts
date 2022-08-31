@@ -8,7 +8,10 @@ import { IModelApp, NotifyMessageDetails, OutputMessagePriority, Viewport } from
 import { CurveChainWithDistanceIndex, CurveLocationDetail, LineString3d, Path, Point3d, Vector3d  } from "@itwin/core-geometry";
 import path from "path";
 import { E1, W1A, W3A, W3B, W4 } from "../routes/coordinates";
-import { E2, E3, E4 } from "../routes/E2E3E4";
+import { E4UpHull, E4DownHull  } from "../routes/E4Hull";
+import { E3UpHull, E3DownHull  } from "../routes/E3Hull";
+import { E2UpHull, E2DownHull  } from "../routes/E2Hull";
+
 import { K1 } from "../routes/kiwicoordinates";
 
 export interface CameraPathPoint {
@@ -90,27 +93,30 @@ export class CameraPath {
         case "KiwiRail-Johnsonville Track":          
           currentPathCoordinates = K1
           break;
-        case "AC. TRU East E2 - Coordinated/Shared Model":
-          currentPathCoordinates = E2;
-          break;
-        case "E234 Signal Sighting Mono":
-          currentPathCoordinates = E2;
-          break;
         default:
           console.log("Model not listed in switch :<" + vp?.iModel.name + ">")
           switch (pathName) {
             case "E1":
               currentPathCoordinates = E1
               break;
-            case "E2":
-              currentPathCoordinates = E2
+            case "E4DownHull":
+              currentPathCoordinates = E4DownHull
               break;
-            case "E3":
-              currentPathCoordinates = E3
+            case "E4UpHull":
+              currentPathCoordinates = E4UpHull
               break;
-            case "E4":
-              currentPathCoordinates = E4
+            case "E3DownHull":
+              currentPathCoordinates = E3DownHull
               break;
+            case "E3UpHull":
+              currentPathCoordinates = E3UpHull
+            break;    
+            case "E2DownHull":
+            currentPathCoordinates = E2DownHull
+            break;
+            case "E2UpHull":
+              currentPathCoordinates = E2UpHull
+            break;    
             case  "W1A" : 
               currentPathCoordinates = W1A
               break;
@@ -129,6 +135,7 @@ export class CameraPath {
               default :
               console.log("Path not listed in switch :<" + pathName + ">")
               IModelApp.notifications.outputMessage(new NotifyMessageDetails(OutputMessagePriority.Warning, "Alignment not listed :<" + pathName + ">"));
+              currentPathCoordinates=E1
               break;
           }
           break;
