@@ -435,6 +435,7 @@ useEffect(() => {
     const polyface = builder.claimPolyface(false);
     decorator.setColor(ColorDef.green);
     decorator.addGeometry(polyface)
+    IModelApp.viewManager.addDecorator(decorator);
     // const checkRange = (aCone?.range());
     const checkRange = createRange(aCameraPoint)
     console.log("Checking elements inside range ", checkRange)
