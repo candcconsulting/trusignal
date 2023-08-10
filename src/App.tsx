@@ -34,6 +34,7 @@ const windowElement = document.createElement("div");
 
 const App: React.FC = () => {
   const [iModelId, setIModelId] = useState(process.env.IMJS_IMODEL_ID);
+  const [changeSetId, setChangeSetId] = useState("");
   const [iModelName, setiModelName] = useState("...")
   const [iTwinId, setITwinId] = useState(process.env.IMJS_ITWIN_ID);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -119,6 +120,17 @@ const App: React.FC = () => {
   } , [iModelId])
 
   useEffect(() => {
+    if (!changeSetId) {    
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlChangeSetId = urlParams.get("ChangeSetId") as string;
+      if (urlChangeSetId)
+        setChangeSetId(urlChangeSetId)
+      else
+        setChangeSetId("")
+    }
+  } , [changeSetId])
+
+  useEffect(() => {
     if (accessToken) {
       setIsAuthorized(true)
       const urlParams = new URLSearchParams(window.location.search);
@@ -146,10 +158,14 @@ const App: React.FC = () => {
   }, [accessToken, authClient, iModelId]);
 
   useEffect(() => {
-    if (accessToken && iTwinId && iModelId) {
-      history.push(`?iTwinId=${iTwinId}&iModelId=${iModelId}`);
-    }
-  }, [accessToken, iTwinId, iModelId, authClient]);
+    if (accessToken && iTwinId && iModelId) {      
+      if (changeSetId && changeSetId != "") {
+        history.push(`?iTwinId=${iTwinId}&iModelId=${iModelId}&ChangeSetId=${changeSetId}`)
+      } else {
+        history.push(`?iTwinId=${iTwinId}&iModelId=${iModelId}`);
+      }
+    }    
+  }, [accessToken, iTwinId, iModelId, authClient, changeSetId]);
   
 useEffect(() => {
   if (isOpen) {
@@ -253,6 +269,7 @@ const iModelConnected = useCallback ((iModel: IModelConnection) => {
       <Viewer
         iTwinId={iTwinId}
         iModelId={iModelId}
+        changeSetId={changeSetId}
         authClient={authClient}
         //viewCreatorOptions={viewCreatorOptions}
         enablePerformanceMonitors={true} // see description in the README (https://www.npmjs.com/package/@itwin/desktop-viewer-react)

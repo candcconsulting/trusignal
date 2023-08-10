@@ -14,7 +14,7 @@ import "./cameraPath.scss";
 import { KeySet } from "@itwin/presentation-common";
 import { Presentation, SelectionChangeEventArgs } from "@itwin/presentation-frontend";
 import { BeDuration, Id64String } from "@itwin/core-bentley";
-import { BackgroundMapType, ColorDef, DisplayStyle3dSettingsProps, FeatureAppearance, GeometricElement3dProps, GeometryStreamIterator, Placement3d, RenderMode, SkyBoxProps, TerrainHeightOriginMode, ViewFlagProps } from "@itwin/core-common";
+import { BackgroundMapType, ColorDef, DisplayStyle3dSettingsProps, FeatureAppearance, GeometricElement3dProps, GeometryStreamIterator, Placement3d, RenderMode, SkyBoxProps, TerrainHeightOriginMode, ThematicDisplayMode, ThematicGradientColorScheme, ThematicGradientMode, ViewFlagProps } from "@itwin/core-common";
 import { Cone, LineString3d, Point3d, PolyfaceBuilder, StrokeOptions } from "@itwin/core-geometry";
 import { createRange, getClassifiedElements, getSpatialElements, SectionOfColoring } from "../../api/elementsApi";
 import { VolumeQueryApi } from "../../api/VolumeQueryApi";
@@ -473,11 +473,85 @@ useEffect(() => {
     if (vp.iModel.iModelId === "9e1eb16e-8c71-4880-9dc8-c107eb21cdd3" ){
        terrainOrigin = TerrainHeightOriginMode.Geodetic } 
     const displayStyle: DisplayStyle3dSettingsProps = {
+    /* Standard  */
       environment: {
         sky: defaultSkyBox,
         ground: { display: false },
       },
       viewflags: { ...renderingStyleViewFlags, shadows: false, ambientOcclusion: true, visEdges: false, noWeight: true,},
+      
+      /* Architectural 
+      viewflags: {
+        ...renderingStyleViewFlags,
+        visEdges: true,
+        monochrome: true,
+        ambientOcclusion: true,
+      },
+      monochromeColor: 14475225,
+      monochromeMode: 0,
+      environment: {
+        sky: { display: true, twoColor: true, nadirColor: 13428479, skyColor: 16764303 },
+        ground: { display: false },
+      },
+      hline: {
+        visible: {
+          ovrColor: true,
+          color: 6118749,
+          pattern: 0,
+          width: 1,
+        },
+        hidden: {
+          ovrColor: false,
+          color: 16777215,
+          pattern: 3435973836,
+          width: 0,
+        },
+        transThreshold: 1,
+      },
+      ao: {
+        bias: 0.25,
+        zLengthCap: 0.02315,
+        maxDistance: 100,
+        intensity: 0.3,
+        texelStepSize: 1,
+        blurDelta: 1,
+        blurSigma: 2,
+        blurTexelStepSize: 1,
+      },
+      lights: {
+        solar: {
+          direction: [0.8868521744639655, 0.08360117539208102, -0.4544271824193604],
+          intensity: 0,
+          alwaysEnabled: true,
+        },
+        ambient: { color: { r: 255, g: 255, b: 255 } },
+        hemisphere: {
+          upperColor: { r: 242, g: 233, b: 213 },
+          lowerColor: { r: 213, g: 225, b: 235 },
+          intensity: 0.6,
+        },
+        portrait: {
+          intensity: 1.9,
+        },
+        specularIntensity: 0,
+      },   */
+      /* Thematic Slope
+      viewflags: { ...renderingStyleViewFlags, thematicDisplay: true },
+      thematic: {
+        displayMode: ThematicDisplayMode.Slope,
+        range: [0, 90],
+        axis: [0, 0, 1],
+        gradientSettings: {
+          mode: ThematicGradientMode.Smooth,
+          colorScheme: ThematicGradientColorScheme.Custom,
+          customKeys: [
+            { value: 0, color: 0x404040 },
+            { value: 1, color: 0xffffff },
+          ],
+        },
+      },
+      lights: {}, */
+
       backgroundMap: {
         useDepthBuffer: false,
         groundBias: 0,
@@ -494,7 +568,7 @@ useEffect(() => {
           exaggeration: 1.0,
           heightOriginMode: terrainOrigin,
         },
-      }
+      } 
     };
     // displayStyle.changeBackgroundMapProps({ applyTerrain: true })
     //      displayStyle.backgroundMapSettings = BackgroundMapSettings.fromJSON({
