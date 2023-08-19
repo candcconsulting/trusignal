@@ -5,7 +5,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AbstractWidgetProps, StagePanelLocation, StagePanelSection, UiItemsProvider, WidgetState } from "@itwin/appui-abstract";
 import { useActiveViewport } from "@itwin/appui-react";
-import { EmphasizeElements, IModelApp, ScreenViewport, Viewport } from "@itwin/core-frontend";
+import { EmphasizeElements, IModelApp, RealityDataSource, ScreenViewport, SpatialModelState, Viewport } from "@itwin/core-frontend";
 import { SvgPause, SvgPlay } from "@itwin/itwinui-icons-react";
 import { Alert, Button, IconButton, LabeledInput, LabeledSelect, SelectOption, Slider, ToggleSwitch } from "@itwin/itwinui-react";
 import CameraPathApi, { CameraPath } from "../../api/cameraPathApi";
@@ -14,11 +14,13 @@ import "./cameraPath.scss";
 import { KeySet } from "@itwin/presentation-common";
 import { Presentation, SelectionChangeEventArgs } from "@itwin/presentation-frontend";
 import { BeDuration, Id64String } from "@itwin/core-bentley";
-import { BackgroundMapType, ColorDef, DisplayStyle3dSettingsProps, FeatureAppearance, GeometricElement3dProps, GeometryStreamIterator, Placement3d, RenderMode, SkyBoxProps, TerrainHeightOriginMode, ThematicDisplayMode, ThematicGradientColorScheme, ThematicGradientMode, ViewFlagProps } from "@itwin/core-common";
+import { BackgroundMapType, ColorDef, ContextRealityModelProps, DisplayStyle3dSettingsProps, FeatureAppearance, GeometricElement3dProps, GeometryStreamIterator, Placement3d, RealityDataFormat, RealityDataProvider, RealityDataSourceKey, RenderMode, SkyBoxProps, TerrainHeightOriginMode, ThematicDisplayMode, ThematicGradientColorScheme, ThematicGradientMode, ViewFlagProps } from "@itwin/core-common";
 import { Cone, LineString3d, Point3d, PolyfaceBuilder, StrokeOptions } from "@itwin/core-geometry";
 import { createRange, getClassifiedElements, getSpatialElements, SectionOfColoring } from "../../api/elementsApi";
 import { VolumeQueryApi } from "../../api/VolumeQueryApi";
 import { GeometryDecorator } from "../../utils/GeometryDecorator";
+import { RealityDataAccessClient, RealityDataResponse } from "@itwin/reality-data-client";
+import { RealityDataManager } from "../../api/realityData";
 //import { viewWithUnifiedSelection } from "@itwin/presentation-components";
 //import { ViewportComponent } from "@itwin/imodel-components-react";
 
@@ -156,7 +158,9 @@ const CameraPathWidget = () => {
 
   /** Turn the camera on, and initialize the tool */
   useEffect(() => {
+    console.log("Checking Viewport")
     if (viewport) {
+      console.log('Viewport Ready')
       setInitialView(viewport);
       CameraPathApi.prepareView(viewport);
       setTimeout(() => { void IModelApp.tools.run(CameraPathTool.toolId, handleScrollAnimation, handleUnlockDirection); }, 10);
@@ -468,7 +472,7 @@ useEffect(() => {
     // viewState.viewFlags.renderMode = RenderMode.SmoothShade;
     // viewport?.overrideDisplayStyle(viewState.getDisplayStyle3d())
     // why is W4 Geodetic
-  
+    console.log('Setting Initial View')
     let terrainOrigin = TerrainHeightOriginMode.Geoid
     if (vp.iModel.iModelId === "9e1eb16e-8c71-4880-9dc8-c107eb21cdd3" ){
        terrainOrigin = TerrainHeightOriginMode.Geodetic } 
@@ -580,6 +584,34 @@ useEffect(() => {
 
     vp!.overrideDisplayStyle(displayStyle);    
     vp!.displayStyle.setOSMBuildingDisplay({ onOff: true });    
+/*
+    const RealityDataClient = new RealityDataAccessClient();
+    const available: RealityDataResponse = await RealityDataClient.getRealityDatas(await IModelApp.authorizationClient!.getAccessToken(), vp.iModel.iTwinId, undefined);
+    
+        for (const rdEntry of available.realityDatas) {
+          const name = undefined !== rdEntry.displayName ? rdEntry.displayName : rdEntry.id;
+          const rdSourceKey = {
+            provider: RealityDataProvider.ContextShare,
+            format: rdEntry.type === "OPC" ? RealityDataFormat.OPC : RealityDataFormat.ThreeDTile,
+            id: rdEntry.id,
+          };
+          const tilesetUrl = await IModelApp.realityDataAccess?.getRealityDataUrl(vp.iModel.iTwinId, rdSourceKey.id);
+          if (tilesetUrl) {
+            console.log(`Detaching ${name}`)
+            vp.displayStyle.detachRealityModelByNameAndUrl(name, tilesetUrl);
+          }
+        
+      }
+    vp.invalidateScene();
+    */
+
+    // Get set of RealityDataModelInfo that are directly attached to the model.
+    const rdm = new RealityDataManager()
+    const realityAttachments = await rdm.getAttachedRealityDataModelInfoSet(vp.iModel)
+    for (const realityAttachment of realityAttachments) {
+      vp.displayStyle.detachRealityModelByNameAndUrl(realityAttachment.attachmentName, realityAttachment.attachmentUrl);
+    }
+
     return;
 
   }
