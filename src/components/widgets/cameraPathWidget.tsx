@@ -609,8 +609,10 @@ useEffect(() => {
     const rdm = new RealityDataManager()
     const realityAttachments = await rdm.getAttachedRealityDataModelInfoSet(vp.iModel)
     for (const realityAttachment of realityAttachments) {
+      vp.changeModelDisplay(realityAttachment.modelId, false);
       vp.displayStyle.detachRealityModelByNameAndUrl(realityAttachment.attachmentName, realityAttachment.attachmentUrl);
     }
+    vp.invalidateScene();
 
     return;
 
