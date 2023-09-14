@@ -2,10 +2,17 @@
 * Copyright (c) Bentley Systems, Incorporated. All rights reserved.
 * See LICENSE.md in the project root for license terms and full copyright notice.
 *--------------------------------------------------------------------------------------------*/
-import { IModelApp, Viewport } from "@itwin/core-frontend";
+import { Id64String } from "@itwin/core-bentley";
+import { GeometryStreamIterator } from "@itwin/core-common";
+import { IModelApp, NotifyMessageDetails, OutputMessagePriority, Viewport } from "@itwin/core-frontend";
 import { CurveChainWithDistanceIndex, CurveLocationDetail, LineString3d, Path, Point3d, Vector3d  } from "@itwin/core-geometry";
-import { Point } from "@itwin/core-react";
+import path from "path";
 import { E1, W1A, W3A, W3B, W4 } from "../routes/coordinates";
+import { E4UpHull, E4DownHull  } from "../routes/E4Hull";
+import { E3UpHull, E3DownHull  } from "../routes/E3Hull";
+import { E2UpHull, E2DownHull  } from "../routes/E2Hull";
+
+import { K1 } from "../routes/kiwicoordinates";
 
 export interface CameraPathPoint {
   eyePoint: Point3d;
@@ -42,6 +49,7 @@ export class CameraPath {
   private _xOffset = 0;
   private _yOffset = 0;
   private _zOffset = 0;
+  private _reversePath = false;
 
   
   constructor(public pathName: string) {
@@ -50,6 +58,11 @@ export class CameraPath {
       // we need to handle a geometry handler
     } else {
       const vp = IModelApp.viewManager.getFirstOpenView();
+      const iModelName = vp?.iModel.name
+      if (!iModelName) {
+        // seems that timing means the model name could be blank
+        return
+      }
       let currentPathCoordinates: typeof E1 = [];
 
       switch (vp?.iModel.name) {
@@ -74,16 +87,63 @@ export class CameraPath {
         case "AL. TRU West - W3B - Coordination-Shared Model":
           currentPathCoordinates = W3B;
           break;
-        case "AM. TRU West - W4 - Coordination/Shared Model":
+        case "West of Leeds - W4 - Coordination/Shared":
           currentPathCoordinates = W4;
+          break;
+        case "KiwiRail-Johnsonville Track":          
+          currentPathCoordinates = K1
           break;
         default:
           console.log("Model not listed in switch :<" + vp?.iModel.name + ">")
-          currentPathCoordinates = E1;
+          switch (pathName) {
+            case "E1":
+              currentPathCoordinates = E1
+              break;
+            case "E4DownHull":
+              currentPathCoordinates = E4DownHull
+              break;
+            case "E4UpHull":
+              currentPathCoordinates = E4UpHull
+              break;
+            case "E3DownHull":
+              currentPathCoordinates = E3DownHull
+              break;
+            case "E3UpHull":
+              currentPathCoordinates = E3UpHull
+            break;    
+            case "E2DownHull":
+            currentPathCoordinates = E2DownHull
+            break;
+            case "E2UpHull":
+              currentPathCoordinates = E2UpHull
+            break;    
+            case  "W1A" : 
+              currentPathCoordinates = W1A
+              break;
+            case "W3A":
+              currentPathCoordinates = W3A
+              break;
+            case "W3B" :
+              currentPathCoordinates = W3B
+              break;
+            case "W4":
+              currentPathCoordinates = W4
+              break
+              case "K1":
+                currentPathCoordinates = K1
+                break;
+              default :
+              console.log("Path not listed in switch :<" + pathName + ">")
+              IModelApp.notifications.outputMessage(new NotifyMessageDetails(OutputMessagePriority.Warning, "Alignment not listed :<" + pathName + ">"));
+              currentPathCoordinates=E1
+              break;
+          }
           break;
       }
 
-    
+      if (this._reversePath) {
+        currentPathCoordinates = currentPathCoordinates.reverse()
+      }
       const targetPoints: Point3d[] = [];
       const directions: Point3d[] = [];
       let i = 0;
@@ -112,11 +172,25 @@ export class CameraPath {
   public distanceXYZXYZ (x1 : number, y1 : number, z1 : number, x2 : number, y2 : number, z2 : number) {
     return Math.sqrt(Math.pow(x2 - x1,2) + Math.pow(y2 - y1,2) + Math.pow(z2 - z1,2))
   }
+  public setReversePath(reversePath : boolean) {
+    this._reversePath = reversePath;
+    this._path?.reverseInPlace();
+  }
 
   public setPathFromLine(line: LineString3d) {
-    const path = CurveChainWithDistanceIndex.createCapture(Path.create(line));
+    
+    const path = CurveChainWithDistanceIndex.createCapture(Path.create(line));    
+    
     if (path !== undefined) {
-      this._path = path;      
+      if (this._reversePath) 
+      {
+        path.reverseInPlace()
+        this._path = path;
+      }
+      else
+      {
+        this._path = path;
+      }
     }
   }
 
@@ -167,7 +241,7 @@ export class CameraPath {
   public distanceToTarget(fraction: number) : number {
     if (!this._path) {
       throw new Error("Path was not loaded");
-      return 0}
+    }
 
     const eyePoint = this._path.fractionToPoint(fraction);
     const targetFraction = this._path.moveSignedDistanceFromFraction(fraction, 10, false).fraction;        
@@ -183,13 +257,22 @@ export class CameraPath {
   }
 
   public xOffset(n: number) {
-    this._xOffset = n
+    if (isNaN(n)) 
+      this._xOffset = 0    
+    else
+      this._xOffset = n
   }
   public yOffset(n: number) {
-    this._yOffset = n
+    if (isNaN(n)) 
+      this._yOffset = 0
+    else
+      this._yOffset = n
   }
   public zOffset(n: number) {
-    this._zOffset = n
+    if (isNaN(n)) 
+      this._zOffset = 0
+    else
+      this._zOffset = n
   }
 
   private _getTargetPoint(point: Point3d) {
@@ -203,14 +286,14 @@ export class CameraPath {
 
     const lineString = detail.childDetail.curve as LineString3d;
     const numPoints = lineString.packedPoints.length;
-    const { segmentIndex, segmentFraction } = this._getSegmentIndexAndLocalFraction(detail, numPoints);
+    const { segmentIndex } = this._getSegmentIndexAndLocalFraction(detail, numPoints);
 
     // If we are standing on the last point, just return the last point
     if (numPoints - 1 === segmentIndex)
       return new Point3d(this._targetPoints[segmentIndex].x, this._targetPoints[segmentIndex].y, this._targetPoints[segmentIndex].z);
 
     // We are in between two points of the path, interpolate between the two points
-    const prevTargetPoint = this._targetPoints[segmentIndex];
+    // const prevTargetPoint = this._targetPoints[segmentIndex];
     const nextTargetPoint = this._targetPoints[segmentIndex + 1];
     return nextTargetPoint;
     /* return prevTargetPoint.interpolate(segmentFraction, nextTargetPoint); */
